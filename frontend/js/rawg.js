@@ -80,13 +80,19 @@ export async function getRAWGDetails(providerId) {
   if (!isConfigured()) return null;
 
   try {
-    const res = await fetch(proxied(buildUrl(`/games/${providerId}`)));
-    if (!res.ok) throw new Error(`RAWG details failed: ${res.status}`);
+    const res = await fetch(`/api/rawg?id=${providerId}`);
+
+    if (!res.ok) {
+      throw new Error(`RAWG details failed: ${res.status}`);
+    }
+
     const raw = await res.json();
+
     return {
       description: raw.description_raw || '',
       playtime: raw.playtime || null,
     };
+
   } catch (err) {
     console.warn('[rawg] details error', err);
     return null;

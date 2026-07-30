@@ -4,25 +4,29 @@ const BASE_URL = 'https://api.rawg.io/api';
 
 export default async function handler(req, res) {
   try {
-    const { q } = req.query;
+    const { q, id } = req.query;
 
-    if (!q) {
+    let url;
+
+    if (id) {
+      url = new URL(`${BASE_URL}/games/${id}`);
+      url.searchParams.set('key', RAWG_API_KEY);
+    } else if (q) {
+      url = new URL(`${BASE_URL}/games`);
+      url.searchParams.set('key', RAWG_API_KEY);
+      url.searchParams.set('search', q);
+      url.searchParams.set('page_size', '20');
+    } else {
       return res.status(400).json({
-        error: 'Missing query'
+        error: 'Missing q or id'
       });
     }
-
-    const url = new URL(`${BASE_URL}/games`);
-
-    url.searchParams.set('key', RAWG_API_KEY);
-    url.searchParams.set('search', q);
-    url.searchParams.set('page_size', '20');
 
     const response = await fetch(url);
 
     if (!response.ok) {
       return res.status(response.status).json({
-        error: `RAWG error ${response.status}`
+        error: `RAWG ${response.status}`
       });
     }
 
@@ -31,10 +35,10 @@ export default async function handler(req, res) {
     res.status(200).json(data);
 
   } catch (error) {
-    console.error('[api/rawg]', error);
+    console.error(error);
 
     res.status(500).json({
-      error: 'Server error'
+      error: 'Internal server error'
     });
   }
 }
