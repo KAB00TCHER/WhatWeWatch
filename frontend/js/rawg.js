@@ -64,7 +64,7 @@ export async function searchRAWG(query) {
 
   try {
     const target = buildUrl('/games', { search: query, page_size: '20' });
-    const res = await fetch(proxied(target));
+    const res = await fetch(`/api/rawg?q=${encodeURIComponent(query)}`);
     if (!res.ok) throw new Error(`RAWG search failed: ${res.status}`);
     const data = await res.json();
     return (data.results || []).map(mapResultToModel);
