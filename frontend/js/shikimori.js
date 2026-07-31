@@ -100,10 +100,16 @@ export async function getShikimoriDetails(providerId) {
       description: raw.description || '',
       episodes: raw.episodes || null,
       runtime: raw.duration || null,
+
+      backdrop:
+        raw.screenshots?.length
+          ? 'https://shikimori.one' + raw.screenshots[0].original
+          : null,
     };
 
   } catch (err) {
     console.warn('[shikimori] details error', err);
     return null;
   }
+  
 }
