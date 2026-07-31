@@ -10,20 +10,20 @@
 // even before any API key is configured.
 
 import { searchTMDB, getTMDBDetails } from './tmdb.js';
-// import { searchShikimori, getShikimoriDetails } from './shikimori.js';
+import { searchShikimori, getShikimoriDetails } from './shikimori.js';
 import { searchRAWG, getRAWGDetails } from './rawg.js';
 
 
 // Add a new provider's search function here — nothing else in the app needs
 // to change.
-const PROVIDERS = [searchTMDB,searchRAWG ]; //searchShikimori,
+const PROVIDERS = [searchTMDB,searchShikimori, searchRAWG ]; //
 
 // Search results don't carry every field (runtime, episode count,
 // description) — each provider that can fill those in later registers a
 // fetcher here, keyed by its own `provider` value.
 const DETAIL_FETCHERS = {
   tmdb: (item) => getTMDBDetails(item.providerId, item.type),
-// shikimori: (item) => getShikimoriDetails(item.providerId),
+  shikimori: (item) => getShikimoriDetails(item.providerId),
 rawg: (item) => getRAWGDetails(item.providerId),
 };
 
