@@ -3,5 +3,6 @@
 // one of the other files, not here.
 
 import { initHomePage } from './home.js';
+import { initWheel } from "./wheel.js";
 
-document.addEventListener('DOMContentLoaded', initHomePage);
+document.addEventListener('DOMContentLoaded', initHomePage,initWheel);
