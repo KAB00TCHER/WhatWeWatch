@@ -177,7 +177,7 @@ searchForm.addEventListener('submit', async (e) => {
   showLoading();
 
   try {
-    currentSearchResults = await searchAll(query);
+    currentSearchResults = await searchAll(query, activeType);
     currentView = 'search';
     render();
   } finally {
