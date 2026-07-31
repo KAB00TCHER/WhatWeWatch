@@ -9,7 +9,7 @@ import * as storage from './storage.js';
 import * as ui from './ui.js';
 import { demoData } from './demoData.js';
 
-let activeType = 'all';
+const activeTypes = new Set();
 let currentView = 'library'; // 'library' | 'search'
 let currentSearchResults = [];
 let els = null;
@@ -105,9 +105,7 @@ async function hideLoading() {
   searchInput.focus();
 }
 
-function byType(items, type) {
-  return type === 'all' ? items : items.filter((item) => item.type === type);
-}
+
 
 function getLibraryView() {
   const records = storage.getLibraryWithDetails();
@@ -121,14 +119,16 @@ function render() {
 
   if (currentView === 'search') {
     resultsSection.hidden = false;
-    ui.renderGrid(resultsGrid, byType(currentSearchResults, activeType), {
+
+    ui.renderGrid(resultsGrid, currentSearchResults, {
       onSelect: openDetail,
     });
+
   } else {
     resultsSection.hidden = true;
   }
 
-  ui.renderGrid(libraryGrid, byType(getLibraryView(), activeType), {
+  ui.renderGrid(libraryGrid, getLibraryView(), {
     onSelect: openDetail,
   });
 }
@@ -177,7 +177,7 @@ searchForm.addEventListener('submit', async (e) => {
   showLoading();
 
   try {
-    currentSearchResults = await searchAll(query, activeType);
+    currentSearchResults = await searchAll(query, activeTypes);
     currentView = 'search';
     render();
   } finally {
@@ -186,21 +186,47 @@ searchForm.addEventListener('submit', async (e) => {
 });
 
   clearSearch.addEventListener('click', () => {
-    currentView = 'library';
-    searchInput.value = '';
-    render();
-  });
-
-  typeFilters.addEventListener('click', (e) => {
-    const btn = e.target.closest('.type-filter');
-    if (!btn) return;
-
-    activeType = btn.dataset.type;
-
-    ui.setActiveFilter(typeFilters, activeType);
-
-    render();
-  });
-
+  currentView = 'library';
+  searchInput.value = '';
   render();
+});
+
+typeFilters.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.type-filter');
+
+  if (!btn || isSearching) return;
+
+  const type = btn.dataset.type;
+
+  if (activeTypes.has(type)) {
+    activeTypes.delete(type);
+    btn.classList.remove('is-active');
+  } else {
+    activeTypes.add(type);
+    btn.classList.add('is-active');
+  }
+
+  if (currentView === 'search' && searchInput.value.trim()) {
+    showLoading();
+
+    try {
+      currentSearchResults = await searchAll(
+        searchInput.value.trim(),
+        activeTypes
+      );
+
+      render();
+    } finally {
+      await hideLoading();
+    }
+  }
+});
+
+render();
+
+  
 }
+
+
+
+

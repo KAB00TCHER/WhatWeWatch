@@ -38,51 +38,58 @@ function dedupe(items) {
   });
 }
 
-export async function searchAll(query, type = 'all') {
-  const trimmed = (query || '').trim();
+export async function searchAll(query, activeTypes = new Set()) {
+  const trimmed = query.trim();
 
   if (!trimmed) return [];
 
-  let providers;
+  const searches = [];
 
-  switch (type) {
-    case 'movie':
-      providers = [
-        async (q) =>
-          (await searchTMDB(q)).filter((item) => item.type === 'movie'),
-      ];
-      break;
+  const searchAllProviders = activeTypes.size === 0;
 
-    case 'series':
-      providers = [
-        async (q) =>
-          (await searchTMDB(q)).filter((item) => item.type === 'series'),
-      ];
-      break;
+  const needMovies =
+    searchAllProviders || activeTypes.has('movie');
 
-    case 'anime':
-      providers = [searchShikimori];
-      break;
+  const needSeries =
+    searchAllProviders || activeTypes.has('series');
 
-    case 'game':
-      providers = [searchRAWG];
-      break;
+  const needAnime =
+    searchAllProviders || activeTypes.has('anime');
 
-    default:
-      providers = [
-        searchTMDB,
-        searchShikimori,
-        searchRAWG,
-      ];
+  const needGames =
+    searchAllProviders || activeTypes.has('game');
+
+  if (needMovies || needSeries) {
+    searches.push(async () => {
+      let results = await searchTMDB(trimmed);
+
+      if (needMovies && !needSeries) {
+        results = results.filter((x) => x.type === 'movie');
+      }
+
+      if (needSeries && !needMovies) {
+        results = results.filter((x) => x.type === 'series');
+      }
+
+      return results;
+    });
+  }
+
+  if (needAnime) {
+    searches.push(() => searchShikimori(trimmed));
+  }
+
+  if (needGames) {
+    searches.push(() => searchRAWG(trimmed));
   }
 
   const settled = await Promise.allSettled(
-    providers.map((search) => search(trimmed))
+    searches.map((fn) => fn())
   );
 
   const combined = settled
-    .filter((result) => result.status === 'fulfilled')
-    .flatMap((result) => result.value);
+    .filter((r) => r.status === 'fulfilled')
+    .flatMap((r) => r.value);
 
   return dedupe(combined);
 }
