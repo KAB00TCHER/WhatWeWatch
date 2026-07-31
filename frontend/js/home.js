@@ -105,7 +105,13 @@ async function hideLoading() {
   searchInput.focus();
 }
 
+function filterResults(items) {
+  if (activeTypes.size === 0) {
+    return items;
+  }
 
+  return items.filter((item) => activeTypes.has(item.type));
+}
 
 function getLibraryView() {
   const records = storage.getLibraryWithDetails();
@@ -120,17 +126,25 @@ function render() {
   if (currentView === 'search') {
     resultsSection.hidden = false;
 
-    ui.renderGrid(resultsGrid, currentSearchResults, {
-      onSelect: openDetail,
-    });
+    ui.renderGrid(
+      resultsGrid,
+      filterResults(currentSearchResults),
+      {
+        onSelect: openDetail,
+      }
+    );
 
   } else {
     resultsSection.hidden = true;
   }
 
-  ui.renderGrid(libraryGrid, getLibraryView(), {
-    onSelect: openDetail,
-  });
+  ui.renderGrid(
+    libraryGrid,
+    filterResults(getLibraryView()),
+    {
+      onSelect: openDetail,
+    }
+  );
 }
 
 async function openDetail(item) {
@@ -206,20 +220,7 @@ typeFilters.addEventListener('click', async (e) => {
     btn.classList.add('is-active');
   }
 
-  if (currentView === 'search' && searchInput.value.trim()) {
-    showLoading();
-
-    try {
-      currentSearchResults = await searchAll(
-        searchInput.value.trim(),
-        activeTypes
-      );
-
-      render();
-    } finally {
-      await hideLoading();
-    }
-  }
+  render();
 });
 
 render();
