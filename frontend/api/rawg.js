@@ -18,27 +18,54 @@ export default async function handler(req, res) {
       url.searchParams.set('page_size', '20');
     } else {
       return res.status(400).json({
-        error: 'Missing q or id'
+        error: 'Missing q or id',
       });
     }
 
-    const response = await fetch(url);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1000);
+
+    let response;
+
+    try {
+      response = await fetch(url, {
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        return res.status(503).json({
+          error: 'GAME_DATABASE_UNAVAILABLE',
+        });
+      }
+
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
+      // Любая ошибка сервера RAWG (500, 502, 520, 522, 524...)
+      if (response.status >= 500) {
+        return res.status(503).json({
+          error: 'GAME_DATABASE_UNAVAILABLE',
+        });
+      }
+
+      // Остальные ошибки (401, 404 и т.п.)
       return res.status(response.status).json({
-        error: `RAWG ${response.status}`
+        error: `RAWG ${response.status}`,
       });
     }
 
     const data = await response.json();
 
-    res.status(200).json(data);
+    return res.status(200).json(data);
 
   } catch (error) {
-    console.error(error);
+    console.error('[RAWG API]', error);
 
-    res.status(500).json({
-      error: 'Internal server error'
+    return res.status(503).json({
+      error: 'GAME_DATABASE_UNAVAILABLE',
     });
   }
 }

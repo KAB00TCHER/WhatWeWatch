@@ -94,7 +94,20 @@ export async function getRAWGDetails(providerId) {
     };
 
   } catch (err) {
-    console.warn('[rawg] details error', err);
-    return null;
-  }
+    console.warn('[rawg] search error', err);
+
+    if (!window.rawgErrorShown) {
+        window.rawgErrorShown = true;
+
+        alert(
+            'Игровая база данных временно недоступна. Попробуйте выполнить поиск позже.'
+        );
+
+        setTimeout(() => {
+            window.rawgErrorShown = false;
+        }, 5000);
+    }
+
+    return [];
+}
 }
