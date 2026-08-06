@@ -5,4 +5,4 @@
 import { initHomePage } from './home.js';
 // import { initWheel } from "./wheel.js";
 
-document.addEventListener('DOMContentLoaded', initHomePage,initWheel);
+// document.addEventListener('DOMContentLoaded', initHomePage,initWheel);
