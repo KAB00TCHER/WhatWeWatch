@@ -83,9 +83,9 @@ export async function searchAll(query, activeTypes = new Set()) {
     searches.push(() => searchShikimori(trimmed));
   }
 
-  // if (needGames) {
-  //   searches.push(() => searchRAWG(trimmed));
-  // }
+  if (needGames) {
+    searches.push(() => searchRAWG(trimmed));
+  }
 
   const settled = await Promise.allSettled(
     searches.map((fn) => fn())
