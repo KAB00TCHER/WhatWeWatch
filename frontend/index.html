@@ -11,22 +11,36 @@
 </head>
 <body>
 
-  <header class="app-header">
-    <h1 class="app-header__brand">ЧТОСМОТРИМ</h1>
+<header class="app-header">
+  <h1 class="app-header__brand">ЧТОСМОТРИМ</h1>
 
-    <form class="search-bar" id="search-form">
-      <input
-        type="search"
-        id="search-input"
-        class="search-bar__input"
-        placeholder="Search a title…"
-        autocomplete="off"
-      />
-      <button type="submit" class="search-bar__button">Search</button>
-    </form>
-  </header>
+  <form class="search-bar" id="search-form">
+    <input
+      type="search"
+      id="search-input"
+      class="search-bar__input"
+      placeholder="Search a title…"
+      autocomplete="off"
+    />
 
-  <nav class="type-filters" id="type-filters">
+    <button
+      type="submit"
+      class="search-bar__button"
+    >
+      Search
+    </button>
+  </form>
+
+  <button
+    type="button"
+    class="account-button"
+    id="account-button"
+  >
+    Войти
+  </button>
+</header>
+
+
     
 <nav class="type-filters" id="type-filters">
     
@@ -51,7 +65,7 @@
   </button>
 
 </nav>
-  </nav>
+
 
   <main class="app-main">
 
@@ -85,6 +99,123 @@
     <p class="loading-text" id="loading-text">
       Подбираем результаты из всех доступных баз данных
     </p>
+  </div>
+</div>
+
+
+<!-- Authentication modal -->
+
+<div
+  class="auth-overlay"
+  id="auth-overlay"
+  hidden
+>
+  <div
+    class="auth-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Authentication"
+  >
+
+    <h2 id="auth-title">Вход</h2>
+
+    <form id="auth-form">
+
+      <label>
+        Email
+        <input
+          type="email"
+          id="auth-email"
+          autocomplete="email"
+          required
+        />
+      </label>
+
+      <label>
+        Пароль
+        <input
+          type="password"
+          id="auth-password"
+          autocomplete="current-password"
+          required
+        />
+      </label>
+
+<label
+  id="auth-password-confirm-field"
+  hidden
+>
+  Повторите пароль
+
+  <input
+    type="password"
+    id="auth-password-confirm"
+    autocomplete="new-password"
+  />
+</label>
+
+      <p
+        class="auth-error"
+        id="auth-error"
+        hidden
+      ></p>
+
+      <button
+        type="submit"
+        class="button button--primary"
+        id="auth-submit"
+      >
+        Войти
+      </button>
+
+    </form>
+
+    <div class="auth-switch">
+      <span id="auth-switch-text">
+        Нет аккаунта?
+      </span>
+
+      <button
+        type="button"
+        class="text-button"
+        id="auth-switch"
+      >
+        Зарегистрироваться
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- Account modal -->
+
+<div
+  class="auth-overlay"
+  id="auth-modal"
+  hidden
+>
+  <div
+    class="auth-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Account"
+  >
+
+    <h2>Аккаунт</h2>
+
+    <p class="account-email">
+      <span id="account-email"></span>
+    </p>
+
+    <button
+      type="button"
+      class="button button--danger"
+      id="account-logout"
+    >
+      Выйти
+    </button>
+
   </div>
 </div>
 

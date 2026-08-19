@@ -47,13 +47,22 @@ async function authRequest(path, options = {}) {
 }
 
 export async function signUp(email, password) {
-  return authRequest('/signup', {
+  const data = await authRequest('/signup', {
     method: 'POST',
     body: JSON.stringify({
       email,
       password,
     }),
   });
+
+  if (data?.access_token) {
+    localStorage.setItem(
+      'whatwewatch:session',
+      JSON.stringify(data)
+    );
+  }
+
+  return data;
 }
 
 export async function signIn(email, password) {
