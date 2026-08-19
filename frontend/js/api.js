@@ -2,12 +2,12 @@
 
 import { searchTMDB, getTMDBDetails } from './tmdb.js';
 import { searchShikimori, getShikimoriDetails } from './shikimori.js';
-// import { searchRAWG, getRAWGDetails } from './rawg.js';
+import { searchRAWG, getRAWGDetails } from './rawg.js';
 
 const DETAIL_FETCHERS = {
   tmdb: (item) => getTMDBDetails(item.providerId, item.type),
   shikimori: (item) => getShikimoriDetails(item.providerId),
-  // rawg: (item) => getRAWGDetails(item.providerId),
+  rawg: (item) => getRAWGDetails(item.providerId),
 };
 
 export async function enrichDetails(item) {
