@@ -46,16 +46,12 @@ async function authRequest(path, options = {}) {
   return data;
 }
 
-export async function signUp(email, password, username = '') {
+export async function signUp(email, password) {
   const data = await authRequest('/signup', {
     method: 'POST',
     body: JSON.stringify({
       email,
       password,
-
-      data: {
-        username: username || null,
-      },
     }),
   });
 
@@ -69,23 +65,7 @@ export async function signUp(email, password, username = '') {
   return data;
 }
 
-export async function getEmailByUsername(username) {
-  const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/rpc/get_email_by_username`,
-    {
-      method: 'POST',
 
-      headers: {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-        'Content-Type': 'application/json',
-      },
-
-      body: JSON.stringify({
-        p_username: username.trim(),
-      }),
-    }
-  );
 
   const text = await response.text();
 
@@ -104,28 +84,9 @@ export async function getEmailByUsername(username) {
   }
 
   return data;
-}
 
-export async function signIn(identifier, password) {
-  let email = identifier.trim();
 
-  /*
-   * Если пользователь ввёл не email,
-   * считаем, что это никнейм.
-   */
-  if (!email.includes('@')) {
-    const foundEmail =
-      await getEmailByUsername(email);
-
-    if (!foundEmail) {
-      throw new Error(
-        'Пользователь с таким никнеймом не найден.'
-      );
-    }
-
-    email = foundEmail;
-  }
-
+export async function signIn(email, password) {
   const data = await authRequest(
     '/token?grant_type=password',
     {
