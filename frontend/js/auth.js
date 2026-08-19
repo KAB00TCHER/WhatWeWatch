@@ -5,6 +5,7 @@ import {
   signIn,
   signOut,
   getCurrentUser as supabaseGetCurrentUser,
+  getProfile,
 } from './supabase.js';
 
 export async function register(email, password) {
@@ -29,6 +30,7 @@ export async function getCurrentUser() {
 ========================================================= */
 
 let currentUser = null;
+let currentProfile = null;
 
 function getElements() {
   return {
@@ -41,7 +43,8 @@ function getElements() {
     authForm: document.getElementById('auth-form'),
     authTitle: document.getElementById('auth-title'),
 
-    authEmail: document.getElementById('auth-email'),
+    authIdentifier: document.getElementById('auth-identifier'),
+    authUsername: document.getElementById('auth-username'),
     authPassword: document.getElementById('auth-password'),
     authPasswordConfirm: document.getElementById('auth-password-confirm'),
 
@@ -86,6 +89,10 @@ function openAuthModal(nextMode = 'login') {
     document.getElementById(
     'auth-password-confirm-field'
     ).hidden = mode === 'login';
+        
+    document.getElementById(
+    'auth-username-field'
+    ).hidden = mode === 'login';
 
   els.authError.hidden = true;
   els.authError.textContent = '';
@@ -95,7 +102,11 @@ function openAuthModal(nextMode = 'login') {
   els.authOverlay.hidden = false;
 
   setTimeout(() => {
-    els.authEmail.focus();
+        if (mode === 'login') {
+    els.authIdentifier.focus();
+    } else {
+    els.authUsername.focus();
+    }
   }, 0);
 }
 
@@ -109,7 +120,9 @@ function openAccountModal() {
   const els = getElements();
 
   els.accountEmail.textContent =
-    currentUser?.email || '';
+    currentProfile?.username ||
+    currentUser?.email ||
+    '';
 
   els.authModal.hidden = false;
 }
@@ -126,11 +139,22 @@ function updateAccountButton() {
   if (!els.accountButton) return;
 
   if (currentUser) {
-    els.accountButton.textContent = currentUser.email;
-    els.accountButton.classList.add('is-authenticated');
+
+    els.accountButton.textContent =
+      currentProfile?.username ||
+      currentUser.email;
+
+    els.accountButton.classList.add(
+      'is-authenticated'
+    );
+
   } else {
+
     els.accountButton.textContent = 'Войти';
-    els.accountButton.classList.remove('is-authenticated');
+
+    els.accountButton.classList.remove(
+      'is-authenticated'
+    );
   }
 }
 
@@ -146,29 +170,43 @@ async function handleAuthSubmit(event) {
 
   const els = getElements();
 
-  const email = els.authEmail.value.trim();
-  const password = els.authPassword.value;
-  const passwordConfirm = els.authPasswordConfirm.value;
+    const identifier = els.authIdentifier.value.trim();
+    const username = els.authUsername.value.trim();
+    const password = els.authPassword.value;
+    const passwordConfirm =
+    els.authPasswordConfirm.value;
 
-  if (!email || !password) {
-    showAuthError('Заполни email и пароль.');
+if (!identifier || !password) {
+  showAuthError(
+    'Заполни логин и пароль.'
+  );
+
+  return;
+}
+
+  if (mode === 'register') {
+    if (username) {
+  if (
+    username.length < 3 ||
+    username.length > 24
+  ) {
+    showAuthError(
+      'Никнейм должен содержать от 3 до 24 символов.'
+    );
+
     return;
   }
 
-  if (mode === 'register') {
-    if (password.length < 6) {
-      showAuthError(
-        'Пароль должен содержать минимум 6 символов.'
-      );
-      return;
-    }
+  if (
+    /[\s@]/.test(username)
+  ) {
+    showAuthError(
+      'Никнейм не должен содержать пробелы или @.'
+    );
 
-    if (password !== passwordConfirm) {
-      showAuthError(
-        'Пароли не совпадают.'
-      );
-      return;
-    }
+    return;
+  }
+}
   }
 
   els.authSubmit.disabled = true;
@@ -178,18 +216,26 @@ async function handleAuthSubmit(event) {
 
   try {
     if (mode === 'login') {
-      const data = await login(email, password);
+      const data = await login(identifier, password);
 
       currentUser = data?.user || await getCurrentUser();
+      if (currentUser) {
+  currentProfile =
+    await getProfile(currentUser.id);
+}
 
       closeAuthModal();
 
       updateAccountButton();
 
     } else {
-      const data = await register(email, password);
+      const data = await register(identifier, password);
 
       currentUser = data?.user || await getCurrentUser();
+      if (currentUser) {
+  currentProfile =
+    await getProfile(currentUser.id);
+}
 
       closeAuthModal();
 
@@ -221,7 +267,7 @@ async function handleLogout() {
     await logout();
 
     currentUser = null;
-
+    currentProfile = null;
     closeAccountModal();
 
     updateAccountButton();
@@ -234,9 +280,16 @@ async function handleLogout() {
 export async function initAuthUI() {
   const els = getElements();
 
-  currentUser = await getCurrentUser();
+currentUser = await getCurrentUser();
 
-  updateAccountButton();
+if (currentUser) {
+  currentProfile =
+    await getProfile(currentUser.id);
+} else {
+  currentProfile = null;
+}
+
+updateAccountButton();
 
   els.accountButton.addEventListener('click', () => {
     if (currentUser) {

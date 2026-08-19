@@ -46,12 +46,16 @@ async function authRequest(path, options = {}) {
   return data;
 }
 
-export async function signUp(email, password) {
+export async function signUp(email, password, username = '') {
   const data = await authRequest('/signup', {
     method: 'POST',
     body: JSON.stringify({
       email,
       password,
+
+      data: {
+        username: username || null,
+      },
     }),
   });
 
@@ -65,14 +69,74 @@ export async function signUp(email, password) {
   return data;
 }
 
-export async function signIn(email, password) {
-  const data = await authRequest('/token?grant_type=password', {
-    method: 'POST',
-    body: JSON.stringify({
-      email,
-      password,
-    }),
-  });
+export async function getEmailByUsername(username) {
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/rpc/get_email_by_username`,
+    {
+      method: 'POST',
+
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+
+      body: JSON.stringify({
+        p_username: username.trim(),
+      }),
+    }
+  );
+
+  const text = await response.text();
+
+  let data = null;
+
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `Supabase ${response.status}: ${text}`
+    );
+  }
+
+  return data;
+}
+
+export async function signIn(identifier, password) {
+  let email = identifier.trim();
+
+  /*
+   * Если пользователь ввёл не email,
+   * считаем, что это никнейм.
+   */
+  if (!email.includes('@')) {
+    const foundEmail =
+      await getEmailByUsername(email);
+
+    if (!foundEmail) {
+      throw new Error(
+        'Пользователь с таким никнеймом не найден.'
+      );
+    }
+
+    email = foundEmail;
+  }
+
+  const data = await authRequest(
+    '/token?grant_type=password',
+    {
+      method: 'POST',
+
+      body: JSON.stringify({
+        email,
+        password,
+      }),
+    }
+  );
 
   if (data?.access_token) {
     localStorage.setItem(
@@ -169,4 +233,15 @@ export async function supabaseRequest(path, options = {}) {
   }
 
   return data;
+}
+
+export async function getProfile(userId) {
+  const data = await supabaseRequest(
+    `profiles?user_id=eq.${encodeURIComponent(userId)}&select=user_id,username`,
+    {
+      method: 'GET',
+    }
+  );
+
+  return data?.[0] || null;
 }

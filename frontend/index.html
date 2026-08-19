@@ -121,15 +121,29 @@
 
     <form id="auth-form">
 
-      <label>
-        Email
-        <input
-          type="email"
-          id="auth-email"
-          autocomplete="email"
-          required
-        />
-      </label>
+      <label
+  id="auth-username-field"
+  hidden
+>
+  Никнейм
+  <input
+    type="text"
+    id="auth-username"
+    autocomplete="username"
+    maxlength="24"
+  />
+</label>
+
+<label>
+  Email или никнейм
+
+  <input
+    type="text"
+    id="auth-identifier"
+    autocomplete="username"
+    required
+  />
+</label>
 
       <label>
         Пароль
