@@ -1,26 +1,26 @@
 // js/auth.js
 
 import {
-  register as supabaseRegister,
-  login as supabaseLogin,
-  logout as supabaseLogout,
-  getUser,
+  signUp,
+  signIn,
+  signOut,
+  getCurrentUser as supabaseGetCurrentUser,
 } from './supabase.js';
 
 export async function register(email, password) {
-  return supabaseRegister(email, password);
+  return signUp(email, password);
 }
 
 export async function login(email, password) {
-  return supabaseLogin(email, password);
+  return signIn(email, password);
 }
 
 export async function logout() {
-  return supabaseLogout();
+  return signOut();
 }
 
 export async function getCurrentUser() {
-  return getUser();
+  return supabaseGetCurrentUser();
 }
 
 
