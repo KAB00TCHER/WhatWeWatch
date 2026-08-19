@@ -60,36 +60,16 @@ function mapResultToModel(raw) {
 }
 
 export async function searchRAWG(query) {
-  if (!isConfigured() || !query.trim()) {
-    console.log('[rawg] search skipped:', query);
-    return [];
-  }
+  if (!isConfigured() || !query.trim()) return [];
 
   try {
-    console.log('[rawg] searching:', query);
-
-    const res = await fetch(
-      `/api/rawg?q=${encodeURIComponent(query)}`
-    );
-
-    console.log('[rawg] response status:', res.status);
-
-    if (!res.ok) {
-      throw new Error(`RAWG search failed: ${res.status}`);
-    }
-
+    const target = buildUrl('/games', { search: query, page_size: '20' });
+    const res = await fetch(`/api/rawg?q=${encodeURIComponent(query)}`);
+    if (!res.ok) throw new Error(`RAWG search failed: ${res.status}`);
     const data = await res.json();
-
-    console.log('[rawg] raw results:', data.results?.length ?? 0);
-
-    const results = (data.results || []).map(mapResultToModel);
-
-    console.log('[rawg] mapped results:', results);
-
-    return results;
-
+    return (data.results || []).map(mapResultToModel);
   } catch (err) {
-    console.error('[rawg] search error:', err);
+    console.warn('[rawg] search error', err);
     return [];
   }
 }
