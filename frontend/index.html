@@ -28,10 +28,29 @@
 
   <nav class="type-filters" id="type-filters">
     
-    <button class="type-filter" data-type="movie"><span class="type-dot type-dot--movie"></span>Фильмы</button>
-    <button class="type-filter" data-type="series"><span class="type-dot type-dot--series"></span>Сериалы</button>
-    <button class="type-filter" data-type="anime"><span class="type-dot type-dot--anime"></span>Аниме</button>
-    <button class="type-filter" data-type="game"><span class="type-dot type-dot--game"></span>Игры</button>
+<nav class="type-filters" id="type-filters">
+    
+  <button class="type-filter" data-type="movie">
+    <span class="type-dot type-dot--movie"></span>
+    Фильмы
+  </button>
+
+  <button class="type-filter" data-type="series">
+    <span class="type-dot type-dot--series"></span>
+    Сериалы
+  </button>
+
+  <button class="type-filter" data-type="anime">
+    <span class="type-dot type-dot--anime"></span>
+    Аниме
+  </button>
+
+  <button class="type-filter" data-type="game">
+    <span class="type-dot type-dot--game"></span>
+    Игры
+  </button>
+
+</nav>
   </nav>
 
   <main class="app-main">
@@ -68,36 +87,9 @@
     </p>
   </div>
 </div>
-<button id="wheel-button" class="wheel-button">
-    🎲 Не могу выбрать
-</button>
 
-<div id="wheel-overlay" class="modal-overlay" hidden>
-    <div class="wheel-modal">
-
-        <button class="wheel-close" id="wheel-close">
-            ✕
-        </button>
-
-        <h2>Что выбрать?</h2>
-
-        <div id="wheel-container"></div>
-
-        <div class="wheel-controls">
-            <button id="spin-button">
-                Крутить
-            </button>
-
-            <button id="wheel-open-card" hidden>
-                Открыть карточку
-            </button>
-        </div>
-
-    </div>
-</div>
   <footer class="app-footer">
     <p>WhatWeWatch — a personal media library</p>
-    <p>KABOOTCHER</p>
   </footer>
 
   <script type="module" src="js/app.js"></script>

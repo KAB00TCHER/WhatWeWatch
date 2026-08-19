@@ -17,7 +17,11 @@ export async function enrichDetails(item) {
 
   try {
     const extra = await fetchDetails(item);
-    return extra ? { ...item, ...extra } : item;
+
+    return extra
+      ? { ...item, ...extra }
+      : item;
+
   } catch (err) {
     console.warn('[api] detail enrichment failed', err);
     return item;
