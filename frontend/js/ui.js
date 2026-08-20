@@ -20,9 +20,9 @@ const TYPE_LABELS = {
 };
 
 function secondaryLine(item) {
-  if (item.type === 'movie' && item.runtime) return `${item.runtime} min`;
-  if ((item.type === 'series' || item.type === 'anime') && item.episodes) return `${item.episodes} ep`;
-  if (item.type === 'game' && item.playtime) return `${item.playtime}h`;
+  if (item.type === 'movie' && item.runtime) return `${item.runtime} мин`;
+  if ((item.type === 'series' || item.type === 'anime') && item.episodes) return `${item.episodes} эп`;
+  if (item.type === 'game' && item.playtime) return `${item.playtime}ч`;
   return '';
 }
 
@@ -39,7 +39,7 @@ export function renderGrid(container, items, { onSelect } = {}) {
   container.innerHTML = '';
 
   if (!items.length) {
-    renderEmptyState(container, 'Nothing here yet.');
+    renderEmptyState(container, 'Здесь пока ничего нет.');
     return;
   }
   const fragment = document.createDocumentFragment();
@@ -54,7 +54,7 @@ export function renderList(container, items, { onSelect } = {}) {
   container.innerHTML = '';
 
   if (!items.length) {
-    renderEmptyState(container, 'Nothing here yet.');
+    renderEmptyState(container, 'Здесь пока ничего нет.');
     return;
   }
 
@@ -148,7 +148,7 @@ export function openRandomChoice(
       class="modal__close"
       type="button"
       data-action="close"
-      aria-label="Close"
+      aria-label="Закрыть"
     >
       &times;
     </button>
@@ -378,7 +378,7 @@ export function openModal(overlayEl, modalEl, { item, record, onAdd, onSave, onR
   const inLibrary = Boolean(record);
 
   modalEl.innerHTML = `
-    <button class="modal__close" type="button" data-action="close" aria-label="Close">&times;</button>
+    <button class="modal__close" type="button" data-action="close" aria-label="Закрыть">&times;</button>
     ${item.backdrop ? `<img class="modal__backdrop" src="${item.backdrop}" alt="" />` : ''}
     <div class="modal__content">
       <span class="card__type">${TYPE_LABELS[item.type] || item.type}</span>
@@ -388,11 +388,11 @@ export function openModal(overlayEl, modalEl, { item, record, onAdd, onSave, onR
           .filter(Boolean)
           .join(' · ')
       )}</p>
-      <p class="modal__description">${escapeHtml(item.description) || 'No description available.'}</p>
+      <p class="modal__description">${escapeHtml(item.description) || 'Описание отсутствует.'}</p>
 
       <form class="modal__form" id="modal-form">
         <label>
-          Status
+          Статус
           <select name="status">
             ${Object.entries(STATUS_LABELS)
               .map(
@@ -403,16 +403,16 @@ export function openModal(overlayEl, modalEl, { item, record, onAdd, onSave, onR
           </select>
         </label>
         <label>
-          Your rating (0–10)
+          Моя оценка (0–10)
           <input type="number" name="userRating" min="0" max="10" step="0.5" value="${record?.userRating ?? ''}" />
         </label>
         <label>
-          Note
+          Заметка
           <textarea name="note" rows="3">${escapeHtml(record?.note ?? '')}</textarea>
         </label>
         <div class="modal__actions">
-          <button type="submit" class="button button--primary">${inLibrary ? 'Save' : 'Add to library'}</button>
-          ${inLibrary ? '<button type="button" class="button button--danger" data-action="remove">Remove</button>' : ''}
+          <button type="submit" class="button button--primary">${inLibrary ? 'Сохранить' : 'Добавить в библиотеку'}</button>
+          ${inLibrary ? '<button type="button" class="button button--danger" data-action="remove">Удалить</button>' : ''}
         </div>
       </form>
     </div>

@@ -220,7 +220,7 @@ async function hideLoading() {
 
   searchButton.textContent =
     searchButton.dataset.originalText ||
-    'Search';
+    'Поиск';
 
 
   searchInput.focus();
