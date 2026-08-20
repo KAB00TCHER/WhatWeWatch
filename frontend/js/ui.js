@@ -56,14 +56,29 @@ function renderCard(item, onSelect) {
     ? `<img class="card__poster" src="${item.poster}" alt="${escapeHtml(item.title)}" loading="lazy" />`
     : `<div class="card__poster card__poster--placeholder">${escapeHtml((item.title || '?')[0])}</div>`;
 
+    const externalRating = item.rating != null
+  ? `<span class="card__rating">★ ${item.rating} <small>Оценка</small></span>`
+  : '';
+
+const userRating = item.userRating != null
+  ? `<span class="card__user-rating">★ ${item.userRating} <small>Моя оценка</small></span>`
+  : '';
+
+const note = item.note?.trim()
+  ? `<p class="card__note">${escapeHtml(item.note.trim())}</p>`
+  : '';
+
+
   card.innerHTML = `
     ${poster}
     <div class="card__body">
       <span class="card__type">${TYPE_LABELS[item.type] || item.type}</span>
       <h3 class="card__title">${escapeHtml(item.title)}</h3>
       <p class="card__meta">${escapeHtml([item.year, secondaryLine(item)].filter(Boolean).join(' · '))}</p>
-      ${item.status ? `<span class="card__status card__status--${item.status}">${STATUS_LABELS[item.status] || item.status}</span>` : ''}
-      ${item.rating != null ? `<span class="card__rating">★ ${item.rating}</span>` : ''}
+     ${item.status ? `<span class="card__status card__status--${item.status}">${STATUS_LABELS[item.status] || item.status}</span>` : ''}
+      ${externalRating}
+      ${userRating}
+      ${note}
     </div>
   `;
 

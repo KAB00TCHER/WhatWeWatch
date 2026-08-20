@@ -722,3 +722,36 @@ img {
 #account-logout {
   width: 100%;
 }
+
+
+.card__rating,
+.card__user-rating {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.card__rating {
+  color: var(--color-text-muted);
+}
+
+.card__user-rating {
+  color: var(--color-accent);
+}
+
+.card__rating small,
+.card__user-rating small {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.card__note {
+  margin: var(--space-1) 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--color-text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
