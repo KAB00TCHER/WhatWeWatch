@@ -519,32 +519,59 @@ async function restoreMediaItem(
     provider,
     providerId: parsed.providerId,
     type: parsed.type,
-    title: mediaId,
-    originalTitle: mediaId,
+
+    title: '',
+    originalTitle: '',
+
     year: null,
     rating: null,
+
     poster: null,
     backdrop: null,
+
     description: '',
+
     runtime: null,
     episodes: null,
     playtime: null,
   };
 
-  const restored =
-    await enrichDetails(
-      baseItem
+  try {
+    const restored =
+      await enrichDetails(
+        baseItem
+      );
+
+    if (
+      !restored ||
+      !restored.title
+    ) {
+      console.warn(
+        '[storage] failed to restore media:',
+        mediaId,
+        provider
+      );
+
+      return null;
+    }
+
+    cacheMediaItem(
+      restored
     );
 
-  if (!restored) {
+    return restored;
+
+  } catch (err) {
+    console.warn(
+      '[storage] media restore failed:',
+      mediaId,
+      provider,
+      err
+    );
+
     return null;
   }
-
-  cacheMediaItem(restored);
-
-  return restored;
 }
-
 
 
 export async function getLibraryWithDetails() {

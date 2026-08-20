@@ -97,3 +97,5 @@ export async function searchAll(query, activeTypes = new Set()) {
 
   return dedupe(combined);
 }
+
+

@@ -80,21 +80,70 @@ export async function getRAWGDetails(providerId) {
   if (!isConfigured()) return null;
 
   try {
-    const res = await fetch(`/api/rawg?id=${providerId}`);
+    const res = await fetch(
+      `/api/rawg?id=${providerId}`
+    );
 
     if (!res.ok) {
-      throw new Error(`RAWG details failed: ${res.status}`);
+      throw new Error(
+        `RAWG details failed: ${res.status}`
+      );
     }
 
     const raw = await res.json();
 
     return {
-      description: raw.description_raw || '',
-      playtime: raw.playtime || null,
+      id: `rawg-game-${raw.id}`,
+      provider: 'rawg',
+      providerId: raw.id,
+
+      title:
+        raw.name || `Game ${raw.id}`,
+
+      originalTitle:
+        raw.name || `Game ${raw.id}`,
+
+      type: 'game',
+
+      year: raw.released
+        ? Number(
+            String(raw.released).slice(0, 4)
+          )
+        : null,
+
+      rating:
+        typeof raw.rating === 'number' &&
+        raw.rating > 0
+          ? Math.round(
+              raw.rating * 2 * 10
+            ) / 10
+          : null,
+
+      poster:
+        raw.background_image || null,
+
+      backdrop:
+        raw.background_image_additional ||
+        raw.background_image ||
+        null,
+
+      description:
+        raw.description_raw || '',
+
+      runtime: null,
+
+      episodes: null,
+
+      playtime:
+        raw.playtime || null,
     };
 
   } catch (err) {
-    console.warn('[rawg] details error', err);
+    console.warn(
+      '[rawg] details error',
+      err
+    );
+
     return null;
   }
 }

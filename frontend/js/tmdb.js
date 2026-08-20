@@ -128,19 +128,85 @@ export async function searchTMDB(query) {
 // used when opening a detail view or adding a title to the library.
 export async function getTMDBDetails(providerId, type) {
   if (!isConfigured()) return null;
-  const path = type === 'movie' ? `/movie/${providerId}` : `/tv/${providerId}`;
+
+  const path =
+    type === 'movie'
+      ? `/movie/${providerId}`
+      : `/tv/${providerId}`;
 
   try {
-    const res = await fetch(buildUrl(path, { language: 'ru-RU' }));
-    if (!res.ok) throw new Error(`TMDB details failed: ${res.status}`);
+    const res = await fetch(
+      buildUrl(path, { language: 'ru-RU' })
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        `TMDB details failed: ${res.status}`
+      );
+    }
+
     const raw = await res.json();
+
+    const isMovie = type === 'movie';
+
+    const dateStr = isMovie
+      ? raw.release_date
+      : raw.first_air_date;
+
     return {
-      runtime: type === 'movie' ? raw.runtime ?? null : null,
-      episodes: type === 'series' ? raw.number_of_episodes ?? null : null,
-      description: raw.overview || '',
+      id: `tmdb-${isMovie ? 'movie' : 'series'}-${raw.id}`,
+      provider: 'tmdb',
+      providerId: raw.id,
+
+      title: isMovie
+        ? raw.title
+        : raw.name,
+
+      originalTitle: isMovie
+        ? raw.original_title
+        : raw.original_name,
+
+      type,
+
+      year: dateStr
+        ? Number(dateStr.slice(0, 4))
+        : null,
+
+      rating:
+        typeof raw.vote_average === 'number'
+          ? Math.round(raw.vote_average * 10) / 10
+          : null,
+
+      poster: raw.poster_path
+        ? POSTER_BASE + raw.poster_path
+        : null,
+
+      backdrop: raw.backdrop_path
+        ? BACKDROP_BASE + raw.backdrop_path
+        : null,
+
+      description:
+        raw.overview || '',
+
+      runtime:
+        isMovie
+          ? raw.runtime ?? null
+          : null,
+
+      episodes:
+        type === 'series'
+          ? raw.number_of_episodes ?? null
+          : null,
+
+      playtime: null,
     };
+
   } catch (err) {
-    console.warn('[tmdb] details error', err);
+    console.warn(
+      '[tmdb] details error',
+      err
+    );
+
     return null;
   }
 }
