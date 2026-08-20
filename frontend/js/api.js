@@ -46,46 +46,91 @@ function normalizeTitle(title) {
   return String(title || '')
     .toLowerCase()
     .replace(/[ё]/g, 'е')
-    .replace(/[^\p{L}\p{N}]+/gu, '');
+    .replace(/[^\p{L}\p{N}\s]+/gu, '')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+
+function titlesMatch(titleA, titleB) {
+  const wordsA = new Set(normalizeTitle(titleA));
+  const wordsB = new Set(normalizeTitle(titleB));
+
+  if (!wordsA.size || !wordsB.size) {
+    return false;
+  }
+
+  let commonWords = 0;
+
+  for (const word of wordsA) {
+    if (wordsB.has(word)) {
+      commonWords++;
+    }
+  }
+
+  const smallerTitle =
+    Math.min(wordsA.size, wordsB.size);
+
+  return (
+    smallerTitle >= 2 &&
+    commonWords / smallerTitle >= 0.8
+  );
 }
 
 
 function removeAnimeDuplicates(items) {
-  const animeTitles = new Set(
-    items
-      .filter((item) => item.type === 'anime')
-      .flatMap((item) => [
-        item.title,
-        item.originalTitle,
-      ])
-      .map(normalizeTitle)
-      .filter(Boolean)
+  const animeItems = items.filter(
+    (item) => item.type === 'anime'
   );
 
-  if (!animeTitles.size) {
+  if (!animeItems.length) {
     return items;
   }
 
   return items.filter((item) => {
     if (
-      item.provider === 'tmdb' &&
-      item.type === 'series'
+      item.provider !== 'tmdb' ||
+      item.type !== 'series'
     ) {
-      const title =
-        normalizeTitle(item.title);
+      return true;
+    }
 
-      const originalTitle =
-        normalizeTitle(item.originalTitle);
+    return !animeItems.some((anime) => {
+      const titleMatches =
+        titlesMatch(
+          item.title,
+          anime.title
+        ) ||
+        titlesMatch(
+          item.title,
+          anime.originalTitle
+        ) ||
+        titlesMatch(
+          item.originalTitle,
+          anime.title
+        );
+
+      if (!titleMatches) {
+        return false;
+      }
+
+      const tmdbYear =
+        Number(item.year);
+
+      const animeYear =
+        Number(anime.year);
 
       if (
-        animeTitles.has(title) ||
-        animeTitles.has(originalTitle)
+        !tmdbYear ||
+        !animeYear
       ) {
         return false;
       }
-    }
 
-    return true;
+      return (
+        tmdbYear === animeYear
+      );
+    });
   });
 }
 
