@@ -458,20 +458,34 @@ function parseMediaId(mediaId, provider) {
   const value = String(mediaId);
 
   if (provider === 'tmdb') {
-    const match = value.match(/^tmdb-(movie|series)-(.+)$/);
+    const match =
+      value.match(
+        /^tmdb-(movie|tv)-(.+)$/
+      );
 
-    if (!match) return null;
+    if (!match) {
+      return null;
+    }
 
     return {
       providerId: match[2],
-      type: match[1],
+
+      type:
+        match[1] === 'tv'
+          ? 'series'
+          : 'movie',
     };
   }
 
   if (provider === 'rawg') {
-    const match = value.match(/^rawg-(.+)$/);
+    const match =
+      value.match(
+        /^rawg-game-(.+)$/
+      );
 
-    if (!match) return null;
+    if (!match) {
+      return null;
+    }
 
     return {
       providerId: match[1],
@@ -480,9 +494,14 @@ function parseMediaId(mediaId, provider) {
   }
 
   if (provider === 'shikimori') {
-    const match = value.match(/^shikimori-(.+)$/);
+    const match =
+      value.match(
+        /^shikimori-anime-(.+)$/
+      );
 
-    if (!match) return null;
+    if (!match) {
+      return null;
+    }
 
     return {
       providerId: match[1],
