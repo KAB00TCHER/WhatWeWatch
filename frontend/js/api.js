@@ -42,6 +42,53 @@ function dedupe(items) {
   });
 }
 
+function normalizeTitle(title) {
+  return String(title || '')
+    .toLowerCase()
+    .replace(/[ё]/g, 'е')
+    .replace(/[^\p{L}\p{N}]+/gu, '');
+}
+
+
+function removeAnimeDuplicates(items) {
+  const animeTitles = new Set(
+    items
+      .filter((item) => item.type === 'anime')
+      .flatMap((item) => [
+        item.title,
+        item.originalTitle,
+      ])
+      .map(normalizeTitle)
+      .filter(Boolean)
+  );
+
+  if (!animeTitles.size) {
+    return items;
+  }
+
+  return items.filter((item) => {
+    if (
+      item.provider === 'tmdb' &&
+      item.type === 'series'
+    ) {
+      const title =
+        normalizeTitle(item.title);
+
+      const originalTitle =
+        normalizeTitle(item.originalTitle);
+
+      if (
+        animeTitles.has(title) ||
+        animeTitles.has(originalTitle)
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
 export async function searchAll(query, activeTypes = new Set()) {
   const trimmed = query.trim();
 
@@ -95,7 +142,9 @@ export async function searchAll(query, activeTypes = new Set()) {
     .filter((r) => r.status === 'fulfilled')
     .flatMap((r) => r.value);
 
-  return dedupe(combined);
+return removeAnimeDuplicates(
+  dedupe(combined)
+);
 }
 
 
