@@ -7,37 +7,77 @@
 import { searchAll, enrichDetails } from './api.js';
 import * as storage from './storage.js';
 import * as ui from './ui.js';
-import { demoData } from './demoData.js';
 
 const activeTypes = new Set();
+
 let currentView = 'library'; // 'library' | 'search'
+
 let currentSearchResults = [];
+
 let els = null;
 
 let loadingTimer1 = null;
 let loadingTimer2 = null;
+
 let isSearching = false;
+
 let loadingStartedAt = 0;
+
+
+// =========================================================
+// DOM
+// =========================================================
 
 function getEls() {
   if (els) return els;
-  els = {
-    searchForm: document.getElementById('search-form'),
-    searchInput: document.getElementById('search-input'),
-    searchButton: document.querySelector('#search-form button[type="submit"]'),
-    typeFilters: document.getElementById('type-filters'),
-    resultsSection: document.getElementById('results-section'),
-    resultsGrid: document.getElementById('results-grid'),
-    libraryGrid: document.getElementById('library-grid'),
-    clearSearch: document.getElementById('clear-search'),
-    modalOverlay: document.getElementById('modal-overlay'),
-    modal: document.getElementById('modal'),
 
-    loadingOverlay: document.getElementById('loading-overlay'),
-    loadingText: document.getElementById('loading-text'),
+  els = {
+    searchForm:
+      document.getElementById('search-form'),
+
+    searchInput:
+      document.getElementById('search-input'),
+
+    searchButton:
+      document.querySelector(
+        '#search-form button[type="submit"]'
+      ),
+
+    typeFilters:
+      document.getElementById('type-filters'),
+
+    resultsSection:
+      document.getElementById('results-section'),
+
+    resultsGrid:
+      document.getElementById('results-grid'),
+
+    libraryGrid:
+      document.getElementById('library-grid'),
+
+    clearSearch:
+      document.getElementById('clear-search'),
+
+    modalOverlay:
+      document.getElementById('modal-overlay'),
+
+    modal:
+      document.getElementById('modal'),
+
+    loadingOverlay:
+      document.getElementById('loading-overlay'),
+
+    loadingText:
+      document.getElementById('loading-text'),
   };
+
   return els;
 }
+
+
+// =========================================================
+// LOADING
+// =========================================================
 
 function showLoading() {
   const {
@@ -47,33 +87,62 @@ function showLoading() {
     searchButton,
   } = getEls();
 
+
   isSearching = true;
-  loadingStartedAt = Date.now();
 
-  loadingOverlay.hidden = false;
+  loadingStartedAt =
+    Date.now();
 
-  searchInput.disabled = true;
 
-  searchButton.disabled = true;
-  searchButton.dataset.originalText = searchButton.textContent;
-  searchButton.textContent = 'Поиск...';
+  loadingOverlay.hidden =
+    false;
+
+
+  searchInput.disabled =
+    true;
+
+
+  searchButton.disabled =
+    true;
+
+  searchButton.dataset.originalText =
+    searchButton.textContent;
+
+  searchButton.textContent =
+    'Поиск...';
+
 
   loadingText.textContent =
     'Подбираем результаты из всех доступных баз данных';
 
-  clearTimeout(loadingTimer1);
-  clearTimeout(loadingTimer2);
 
-  loadingTimer1 = setTimeout(() => {
-    loadingText.textContent =
-      'Это может занять немного больше времени...';
-  }, 3000);
+  clearTimeout(
+    loadingTimer1
+  );
 
-  loadingTimer2 = setTimeout(() => {
-    loadingText.textContent =
-      'Почти готово...';
-  }, 8000);
+  clearTimeout(
+    loadingTimer2
+  );
+
+
+  loadingTimer1 =
+    setTimeout(() => {
+
+      loadingText.textContent =
+        'Это может занять немного больше времени...';
+
+    }, 3000);
+
+
+  loadingTimer2 =
+    setTimeout(() => {
+
+      loadingText.textContent =
+        'Почти готово...';
+
+    }, 8000);
 }
+
 
 async function hideLoading() {
   const {
@@ -82,152 +151,501 @@ async function hideLoading() {
     searchButton,
   } = getEls();
 
-  const elapsed = Date.now() - loadingStartedAt;
-  const remaining = Math.max(0, 1000 - elapsed);
+
+  const elapsed =
+    Date.now() -
+    loadingStartedAt;
+
+
+  const remaining =
+    Math.max(
+      0,
+      1000 - elapsed
+    );
+
 
   if (remaining > 0) {
-    await new Promise(resolve => setTimeout(resolve, remaining));
+
+    await new Promise(
+      resolve =>
+        setTimeout(
+          resolve,
+          remaining
+        )
+    );
   }
 
-  isSearching = false;
 
-  clearTimeout(loadingTimer1);
-  clearTimeout(loadingTimer2);
+  isSearching =
+    false;
 
-  loadingOverlay.hidden = true;
 
-  searchInput.disabled = false;
+  clearTimeout(
+    loadingTimer1
+  );
 
-  searchButton.disabled = false;
+  clearTimeout(
+    loadingTimer2
+  );
+
+
+  loadingOverlay.hidden =
+    true;
+
+
+  searchInput.disabled =
+    false;
+
+
+  searchButton.disabled =
+    false;
+
+
   searchButton.textContent =
-    searchButton.dataset.originalText || 'Search';
+    searchButton.dataset.originalText ||
+    'Search';
+
 
   searchInput.focus();
 }
 
+
+// =========================================================
+// FILTERS
+// =========================================================
+
 function filterResults(items) {
+
   if (activeTypes.size === 0) {
     return items;
   }
 
-  return items.filter((item) => activeTypes.has(item.type));
+
+  return items.filter(
+    item =>
+      activeTypes.has(
+        item.type
+      )
+  );
 }
 
-function getLibraryView() {
-  const records = storage.getLibraryWithDetails();
-  // demoData is only ever a Stage 1 placeholder so the page isn't empty on
-  // first run — it disappears on its own as soon as something real is added.
-  return records.length ? records : demoData;
+
+// =========================================================
+// LIBRARY
+// =========================================================
+
+async function getLibraryView() {
+
+  try {
+
+    return await storage.getLibraryWithDetails();
+
+  } catch (error) {
+
+    console.error(
+      '[library] failed to load library:',
+      error
+    );
+
+    return [];
+  }
 }
 
-function render() {
-  const { resultsSection, resultsGrid, libraryGrid } = getEls();
 
-  if (currentView === 'search') {
-    resultsSection.hidden = false;
+// =========================================================
+// RENDER
+// =========================================================
+
+async function render() {
+
+  const {
+    resultsSection,
+    resultsGrid,
+    libraryGrid,
+  } = getEls();
+
+
+  // -----------------------------------------
+  // Search results
+  // -----------------------------------------
+
+  if (
+    currentView === 'search'
+  ) {
+
+    resultsSection.hidden =
+      false;
+
 
     ui.renderGrid(
       resultsGrid,
-      filterResults(currentSearchResults),
+
+      filterResults(
+        currentSearchResults
+      ),
+
       {
-        onSelect: openDetail,
+        onSelect:
+          openDetail,
       }
     );
 
   } else {
-    resultsSection.hidden = true;
+
+    resultsSection.hidden =
+      true;
   }
+
+
+  // -----------------------------------------
+  // User library
+  // -----------------------------------------
+
+  const library =
+    await getLibraryView();
+
 
   ui.renderGrid(
     libraryGrid,
-    filterResults(getLibraryView()),
+
+    filterResults(
+      library
+    ),
+
     {
-      onSelect: openDetail,
+      onSelect:
+        openDetail,
     }
   );
 }
 
+
+// =========================================================
+// DETAIL MODAL
+// =========================================================
+
 async function openDetail(item) {
-  const { modalOverlay, modal } = getEls();
-  const record = storage.getLibraryRecord(item.id, item.provider);
 
-  // Library items were already enriched when they were added; only a fresh
-  // search result needs the extra round-trip for runtime/episodes/description.
-  const fullItem = record ? item : await enrichDetails(item);
+  const {
+    modalOverlay,
+    modal,
+  } = getEls();
 
-  ui.openModal(modalOverlay, modal, {
-    item: fullItem,
-    record,
 
-    onAdd: (changes) => {
-      storage.addToLibrary(fullItem, changes);
-      render();
-    },
+  let record = null;
 
-    onSave: (changes) => {
-      storage.updateLibraryRecord(fullItem.id, fullItem.provider, changes);
-      render();
-    },
-
-    onRemove: () => {
-      storage.removeFromLibrary(fullItem.id, fullItem.provider);
-      render();
-    },
-  });
-}
-
-export function initHomePage() {
-  const { searchForm, searchInput, typeFilters, clearSearch } = getEls();
-
-searchForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  if (isSearching) return;
-
-  const query = searchInput.value.trim();
-
-  if (!query) return;
-
-  showLoading();
 
   try {
-    currentSearchResults = await searchAll(query, activeTypes);
-    currentView = 'search';
-    render();
-  } finally {
-    await hideLoading();
-  }
-});
 
-  clearSearch.addEventListener('click', () => {
-  currentView = 'library';
-  searchInput.value = '';
-  render();
-});
+    record =
+      await storage.getLibraryRecord(
+        item.id,
+        item.provider
+      );
 
-typeFilters.addEventListener('click', async (e) => {
-  const btn = e.target.closest('.type-filter');
+  } catch (error) {
 
-  if (!btn || isSearching) return;
-
-  const type = btn.dataset.type;
-
-  if (activeTypes.has(type)) {
-    activeTypes.delete(type);
-    btn.classList.remove('is-active');
-  } else {
-    activeTypes.add(type);
-    btn.classList.add('is-active');
+    console.error(
+      '[library] failed to get record:',
+      error
+    );
   }
 
-  render();
-});
 
-render();
+  // Library items already have their
+  // media information cached.
+  //
+  // A fresh search result needs enrichment.
 
-  
+  const fullItem =
+    record
+      ? item
+      : await enrichDetails(item);
+
+
+  ui.openModal(
+    modalOverlay,
+    modal,
+    {
+      item: fullItem,
+
+      record,
+
+
+      // -------------------------------------
+      // ADD
+      // -------------------------------------
+
+      onAdd: async (changes) => {
+
+        try {
+
+          await storage.addToLibrary(
+            fullItem,
+            changes
+          );
+
+
+          await render();
+
+        } catch (error) {
+
+          console.error(
+            '[library] failed to add item:',
+            error
+          );
+
+
+          alert(
+            error.message ||
+            'Не удалось добавить элемент в библиотеку.'
+          );
+        }
+      },
+
+
+      // -------------------------------------
+      // SAVE
+      // -------------------------------------
+
+      onSave: async (changes) => {
+
+        try {
+
+          await storage.updateLibraryRecord(
+            fullItem.id,
+            fullItem.provider,
+            changes
+          );
+
+
+          await render();
+
+        } catch (error) {
+
+          console.error(
+            '[library] failed to update item:',
+            error
+          );
+
+
+          alert(
+            error.message ||
+            'Не удалось сохранить изменения.'
+          );
+        }
+      },
+
+
+      // -------------------------------------
+      // REMOVE
+      // -------------------------------------
+
+      onRemove: async () => {
+
+        try {
+
+          await storage.removeFromLibrary(
+            fullItem.id,
+            fullItem.provider
+          );
+
+
+          await render();
+
+        } catch (error) {
+
+          console.error(
+            '[library] failed to remove item:',
+            error
+          );
+
+
+          alert(
+            error.message ||
+            'Не удалось удалить элемент из библиотеки.'
+          );
+        }
+      },
+    }
+  );
 }
 
 
+// =========================================================
+// INITIALIZATION
+// =========================================================
+
+export function initHomePage() {
+
+  const {
+    searchForm,
+    searchInput,
+    typeFilters,
+    clearSearch,
+  } = getEls();
+
+  window.addEventListener(
+  'authchange',
+  async () => {
+
+    currentView = 'library';
+
+    currentSearchResults = [];
+
+    await render();
+  }
+);
 
 
+  // =======================================================
+  // SEARCH
+  // =======================================================
+
+  searchForm.addEventListener(
+    'submit',
+    async (e) => {
+
+      e.preventDefault();
+
+
+      if (isSearching) {
+        return;
+      }
+
+
+      const query =
+        searchInput.value.trim();
+
+
+      if (!query) {
+        return;
+      }
+
+
+      showLoading();
+
+
+      try {
+
+        currentSearchResults =
+          await searchAll(
+            query,
+            activeTypes
+          );
+
+
+        currentView =
+          'search';
+
+
+        await render();
+
+      } catch (error) {
+
+        console.error(
+          '[search] failed:',
+          error
+        );
+
+      } finally {
+
+        await hideLoading();
+      }
+    }
+  );
+
+
+  // =======================================================
+  // CLEAR SEARCH
+  // =======================================================
+
+  clearSearch.addEventListener(
+    'click',
+    async () => {
+
+      currentView =
+        'library';
+
+      currentSearchResults =
+        [];
+
+      searchInput.value =
+        '';
+
+
+      await render();
+    }
+  );
+
+
+  // =======================================================
+  // TYPE FILTERS
+  // =======================================================
+
+  typeFilters.addEventListener(
+    'click',
+    async (e) => {
+
+      const btn =
+        e.target.closest(
+          '.type-filter'
+        );
+
+
+      if (
+        !btn ||
+        isSearching
+      ) {
+        return;
+      }
+
+
+      const type =
+        btn.dataset.type;
+
+
+      if (
+        activeTypes.has(type)
+      ) {
+
+        activeTypes.delete(
+          type
+        );
+
+        btn.classList.remove(
+          'is-active'
+        );
+
+      } else {
+
+        activeTypes.add(
+          type
+        );
+
+        btn.classList.add(
+          'is-active'
+        );
+      }
+
+
+      await render();
+    }
+  );
+
+
+  // =======================================================
+  // INITIAL LIBRARY LOAD
+  // =======================================================
+
+  render().catch(
+    error => {
+
+      console.error(
+        '[library] initial render failed:',
+        error
+      );
+
+    }
+  );
+}

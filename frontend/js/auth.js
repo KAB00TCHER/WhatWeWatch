@@ -299,18 +299,26 @@ async function handleAuthSubmit(event) {
           password
         );
 
-      currentUser =
-        data?.user ||
-        await getCurrentUser();
+          currentUser =
+            data?.user ||
+            await getCurrentUser();
 
-      closeAuthModal();
+          closeAuthModal();
 
-      updateAccountButton();
+          updateAccountButton();
 
-      console.log(
-        '[auth] Login successful:',
-        currentUser
-      );
+          window.dispatchEvent(
+            new CustomEvent('authchange', {
+              detail: {
+                user: currentUser,
+              },
+            })
+          );
+
+          console.log(
+            '[auth] Login successful:',
+            currentUser
+          );
 
     }
 
@@ -327,18 +335,26 @@ async function handleAuthSubmit(event) {
           password
         );
 
-      currentUser =
-        data?.user ||
-        await getCurrentUser();
+              currentUser =
+          data?.user ||
+          await getCurrentUser();
 
-      closeAuthModal();
+        closeAuthModal();
 
-      updateAccountButton();
+        updateAccountButton();
 
-      console.log(
-        '[auth] Registration successful:',
-        currentUser
-      );
+        window.dispatchEvent(
+          new CustomEvent('authchange', {
+            detail: {
+              user: currentUser,
+            },
+          })
+        );
+
+        console.log(
+          '[auth] Registration successful:',
+          currentUser
+        );
     }
 
 
@@ -376,15 +392,23 @@ async function handleLogout() {
 
     await logout();
 
-    currentUser = null;
+currentUser = null;
 
-    closeAccountModal();
+closeAccountModal();
 
-    updateAccountButton();
+updateAccountButton();
 
-    console.log(
-      '[auth] Logged out'
-    );
+window.dispatchEvent(
+  new CustomEvent('authchange', {
+    detail: {
+      user: null,
+    },
+  })
+);
+
+console.log(
+  '[auth] Logged out'
+);
 
   } catch (error) {
 
