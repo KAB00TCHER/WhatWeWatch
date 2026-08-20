@@ -77,12 +77,65 @@
       <div class="card-grid" id="results-grid"></div>
     </section>
 
-    <section class="library-section" id="library-section">
-      <div class="section-header">
-        <h2>My library</h2>
+<section class="library-section" id="library-section">
+
+  <div class="library-toolbar">
+
+    <div class="section-header">
+      <h2>My library</h2>
+    </div>
+
+    <div class="library-actions">
+
+      <label class="sort-control">
+        <span>Сортировка</span>
+        <select id="library-sort">
+          <option value="added-desc">Недавно добавленные</option>
+          <option value="updated-desc">Недавно изменённые</option>
+          <option value="title-asc">Название А–Я</option>
+          <option value="title-desc">Название Я–А</option>
+          <option value="year-desc">Год: новые</option>
+          <option value="year-asc">Год: старые</option>
+          <option value="user-rating-desc">Моя оценка: высокая</option>
+          <option value="external-rating-desc">Рейтинг БД: высокий</option>
+        </select>
+      </label>
+
+      <div class="view-switcher" role="group" aria-label="Режим отображения">
+        <button
+          type="button"
+          class="view-switcher__button is-active"
+          data-view="cards"
+        >
+          Карточки
+        </button>
+
+        <button
+          type="button"
+          class="view-switcher__button"
+          data-view="list"
+        >
+          Список
+        </button>
       </div>
-      <div class="card-grid" id="library-grid"></div>
-    </section>
+
+      <button
+        type="button"
+        class="button button--primary random-button"
+        id="random-picker"
+      >
+        Что посмотреть?
+      </button>
+
+    </div>
+
+  </div>
+
+  <section class="library-stats" id="library-stats"></section>
+
+  <div class="card-grid" id="library-grid"></div>
+
+</section>
 
   </main>
 
