@@ -622,6 +622,7 @@ export async function getLibraryWithDetails() {
         return {
           ...media,
           ...record,
+          id: media.id,
         };
       })
     );
