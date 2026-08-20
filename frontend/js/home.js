@@ -380,25 +380,31 @@ async function openDetail(item) {
 
         try {
 
-          await storage.addToLibrary(
-            fullItem,
-            changes
-          );
-
+          if (record) {
+            await storage.updateLibraryRecord(
+              fullItem.id,
+              fullItem.provider,
+              changes
+            );
+          } else {
+            await storage.addToLibrary(
+              fullItem,
+              changes
+            );
+          }
 
           await render();
 
         } catch (error) {
 
           console.error(
-            '[library] failed to add item:',
+            '[library] failed to save item:',
             error
           );
 
-
           alert(
             error.message ||
-            'Не удалось добавить элемент в библиотеку.'
+            'Не удалось сохранить изменения.'
           );
         }
       },
