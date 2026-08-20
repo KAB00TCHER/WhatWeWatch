@@ -12,7 +12,7 @@ import {
   getCurrentUser,
 } from './supabase.js';
 
-
+import { enrichDetails } from './api.js';
 // =========================================================
 // CONSTANTS
 // =========================================================
@@ -454,33 +454,131 @@ export async function removeFromLibrary(
 // нет в локальном кэше, такая запись пока
 // не отображается.
 
+function parseMediaId(mediaId, provider) {
+  const value = String(mediaId);
+
+  if (provider === 'tmdb') {
+    const match = value.match(/^tmdb-(movie|series)-(.+)$/);
+
+    if (!match) return null;
+
+    return {
+      providerId: match[2],
+      type: match[1],
+    };
+  }
+
+  if (provider === 'rawg') {
+    const match = value.match(/^rawg-(.+)$/);
+
+    if (!match) return null;
+
+    return {
+      providerId: match[1],
+      type: 'game',
+    };
+  }
+
+  if (provider === 'shikimori') {
+    const match = value.match(/^shikimori-(.+)$/);
+
+    if (!match) return null;
+
+    return {
+      providerId: match[1],
+      type: 'anime',
+    };
+  }
+
+  return null;
+}
+
+
+async function restoreMediaItem(
+  mediaId,
+  provider
+) {
+  const parsed =
+    parseMediaId(
+      mediaId,
+      provider
+    );
+
+  if (!parsed) {
+    console.warn(
+      '[storage] cannot parse media id:',
+      mediaId,
+      provider
+    );
+
+    return null;
+  }
+
+  const baseItem = {
+    id: mediaId,
+    provider,
+    providerId: parsed.providerId,
+    type: parsed.type,
+    title: mediaId,
+    originalTitle: mediaId,
+    year: null,
+    rating: null,
+    poster: null,
+    backdrop: null,
+    description: '',
+    runtime: null,
+    episodes: null,
+    playtime: null,
+  };
+
+  const restored =
+    await enrichDetails(
+      baseItem
+    );
+
+  if (!restored) {
+    return null;
+  }
+
+  cacheMediaItem(restored);
+
+  return restored;
+}
+
+
 
 export async function getLibraryWithDetails() {
-
   const records =
     await getLibraryRecords();
 
+  const items =
+    await Promise.all(
+      records.map(async (record) => {
 
-  return records
-    .map((record) => {
+        let media =
+          getCachedMediaItem(
+            record.mediaId,
+            record.provider
+          );
 
-      const media =
-        getCachedMediaItem(
-          record.mediaId,
-          record.provider
-        );
+        if (!media) {
+          media =
+            await restoreMediaItem(
+              record.mediaId,
+              record.provider
+            );
+        }
 
+        if (!media) {
+          return null;
+        }
 
-      if (!media) {
-        return null;
-      }
+        return {
+          ...media,
+          ...record,
+        };
+      })
+    );
 
-
-      return {
-        ...media,
-        ...record,
-      };
-
-    })
-    .filter(Boolean);
+  return items.filter(Boolean);
 }
