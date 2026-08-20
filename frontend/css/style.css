@@ -875,13 +875,24 @@ img {
    Library list
 ========================================================= */
 
+
+
+.card-grid--list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
 .library-list-item {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) auto 130px;
+  grid-template-columns: 64px minmax(240px, 1fr) 150px 140px;
   align-items: center;
   gap: var(--space-4);
 
-  padding: var(--space-3);
+  width: 100%;
+  min-height: 88px;
+  padding: var(--space-2) var(--space-3);
 
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -891,13 +902,15 @@ img {
 
   transition:
     transform 0.12s ease,
-    border-color 0.12s ease;
+    border-color 0.12s ease,
+    background 0.12s ease;
 }
 
 .library-list-item:hover,
 .library-list-item:focus-visible {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   border-color: var(--color-text-muted);
+  background: var(--color-surface-2);
   outline: none;
 }
 
@@ -1076,17 +1089,18 @@ img {
   }
 
   .library-list-item {
-    grid-template-columns: 48px minmax(0, 1fr) auto;
+    grid-template-columns: 48px minmax(0, 1fr);
     gap: var(--space-3);
+  }
+
+  .library-list-item__status,
+  .library-list-item__ratings {
+    display: none;
   }
 
   .library-list-item__poster {
     width: 48px;
     height: 68px;
-  }
-
-  .library-list-item__status {
-    display: none;
   }
 
   .random-choice {

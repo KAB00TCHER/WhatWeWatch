@@ -33,7 +33,11 @@ function escapeHtml(str) {
 }
 
 export function renderGrid(container, items, { onSelect } = {}) {
+  container.classList.remove('card-grid--list');
+  container.classList.add('card-grid');
+
   container.innerHTML = '';
+
   if (!items.length) {
     renderEmptyState(container, 'Nothing here yet.');
     return;
@@ -44,6 +48,9 @@ export function renderGrid(container, items, { onSelect } = {}) {
 }
 
 export function renderList(container, items, { onSelect } = {}) {
+  container.classList.remove('card-grid');
+  container.classList.add('card-grid--list');
+
   container.innerHTML = '';
 
   if (!items.length) {
