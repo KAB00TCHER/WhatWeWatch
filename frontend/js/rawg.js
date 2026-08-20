@@ -59,6 +59,39 @@ function mapResultToModel(raw) {
   };
 }
 
+function normalizeSearchText(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[ё]/g, 'е')
+    .replace(/[^\p{L}\p{N}\s]+/gu, '')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+
+function isRelevantGameResult(
+  title,
+  query
+) {
+  const queryWords =
+    normalizeSearchText(query);
+
+  const titleWords =
+    new Set(
+      normalizeSearchText(title)
+    );
+
+  if (!queryWords.length || !titleWords.size) {
+    return false;
+  }
+
+  return queryWords.some(
+    (word) =>
+      titleWords.has(word)
+  );
+}
+
+
 export async function searchRAWG(query) {
   if (!isConfigured() || !query.trim()) return [];
 
@@ -67,7 +100,14 @@ export async function searchRAWG(query) {
     const res = await fetch(`/api/rawg?q=${encodeURIComponent(query)}`);
     if (!res.ok) throw new Error(`RAWG search failed: ${res.status}`);
     const data = await res.json();
-    return (data.results || []).map(mapResultToModel);
+    return (data.results || [])
+  .filter((raw) =>
+    isRelevantGameResult(
+      raw.name,
+      query
+    )
+  )
+  .map(mapResultToModel);
   } catch (err) {
     console.warn('[rawg] search error', err);
     return [];
