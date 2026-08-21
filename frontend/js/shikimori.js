@@ -8,6 +8,14 @@
 
 const POSTER_BASE = 'https://shikimori.one';
 
+
+function cleanShikimoriDescription(text) {
+  return String(text || '')
+    .replace(/\[[^\]]+\]/g, '')
+    .trim();
+}
+
+
 function mapResultToModel(raw) {
   return {
     id: `shikimori-anime-${raw.id}`,
@@ -36,7 +44,7 @@ function mapResultToModel(raw) {
       ? POSTER_BASE + raw.image.original
       : null,
 
-    description: raw.description || '',
+    description: cleanShikimoriDescription(raw.description),
 
     runtime: raw.duration || null,
 
@@ -145,7 +153,7 @@ export async function getShikimoriDetails(providerId) {
             ),
 
       description:
-        raw.description || '',
+        cleanShikimoriDescription(raw.description),
 
       runtime:
         raw.duration || null,
