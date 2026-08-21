@@ -82,38 +82,238 @@ function mapResultToModel(raw) {
   };
 }
 
-async function fetchSearchPage(query, language, page) {
+
+function parseSearchQuery(query) {
+  const text = query.trim();
+
+  const yearMatch = text.match(
+    /(?:^|\s)((?:19|20)\d{2})\s*$/
+  );
+
+  if (!yearMatch) {
+    return {
+      title: text,
+      year: null,
+    };
+  }
+
+  return {
+    title: text
+      .slice(0, yearMatch.index)
+      .trim(),
+
+    year: Number(yearMatch[1]),
+  };
+}
+
+
+async function fetchSearchPage(
+  query,
+  language,
+  page,
+  type,
+  year
+) {
+  const endpoint =
+    type === 'movie'
+      ? '/search/movie'
+      : '/search/tv';
+
+  const params = {
+    query,
+    language,
+    include_adult: 'true',
+    page,
+  };
+
+  if (year) {
+    if (type === 'movie') {
+      params.year = year;
+    } else {
+      params.first_air_date_year = year;
+    }
+  }
+
   const res = await fetch(
-    buildUrl('/search/multi', {
-      query,
-      language,
-      include_adult: 'true',
-      page,
-    })
+    buildUrl(endpoint, params)
   );
 
   if (!res.ok) {
-    throw new Error(`TMDB search failed: ${res.status}`);
+    throw new Error(
+      `TMDB ${type} search failed: ${res.status}`
+    );
   }
 
   const data = await res.json();
 
   return (data.results || [])
-    .map(mapResultToModel)
+    .map((raw) => {
+      const mediaType =
+        type === 'movie'
+          ? 'movie'
+          : 'tv';
+
+      return mapResultToModel({
+        ...raw,
+        media_type: mediaType,
+      });
+    })
     .filter(Boolean);
 }
 
-async function fetchSearch(query, language) {
+
+async function fetchSearch(
+  query,
+  language,
+  type,
+  year
+) {
   const pages = await Promise.all(
     Array.from(
       { length: SEARCH_PAGES },
-      (_, index) => fetchSearchPage(query, language, index + 1)
+      (_, index) =>
+        fetchSearchPage(
+          query,
+          language,
+          index + 1,
+          type,
+          year
+        )
     )
   );
 
   return pages.flat();
 }
 
+function normalizeSearchText(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[^a-zа-я0-9\s]+/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+
+function calculateSearchScore(
+  item,
+  query,
+  year
+) {
+  const search =
+    normalizeSearchText(query);
+
+  const title =
+    normalizeSearchText(item.title);
+
+  const originalTitle =
+    normalizeSearchText(
+      item.originalTitle
+    );
+
+  if (!search || !title) {
+    return 0;
+  }
+
+  let score = 0;
+
+  // ---------------------------------------------------
+  // Точное название
+  // ---------------------------------------------------
+
+  if (title === search) {
+    score += 10000;
+  }
+
+  if (
+    originalTitle &&
+    originalTitle === search
+  ) {
+    score += 9500;
+  }
+
+  // ---------------------------------------------------
+  // Название начинается с запроса
+  // ---------------------------------------------------
+
+  if (
+    title.startsWith(search)
+  ) {
+    score += 4000;
+  }
+
+  if (
+    originalTitle &&
+    originalTitle.startsWith(search)
+  ) {
+    score += 3500;
+  }
+
+  // ---------------------------------------------------
+  // Запрос является отдельным словом
+  // ---------------------------------------------------
+
+  const titleWords =
+    title.split(' ');
+
+  const originalTitleWords =
+    originalTitle
+      ? originalTitle.split(' ')
+      : [];
+
+  if (
+    titleWords.includes(search)
+  ) {
+    score += 2500;
+  }
+
+  if (
+    originalTitleWords.includes(search)
+  ) {
+    score += 2200;
+  }
+
+  // ---------------------------------------------------
+  // Частичное совпадение
+  // ---------------------------------------------------
+
+  if (
+    title.includes(search)
+  ) {
+    score += 1000;
+  }
+
+  if (
+    originalTitle &&
+    originalTitle.includes(search)
+  ) {
+    score += 800;
+  }
+
+  // ---------------------------------------------------
+  // Совпадение года
+  // ---------------------------------------------------
+
+  if (year) {
+    if (Number(item.year) === year) {
+      score += 5000;
+    } else {
+      score -= 2500;
+    }
+  }
+
+  // ---------------------------------------------------
+  // Рейтинг TMDB
+  // ---------------------------------------------------
+
+  if (
+    typeof item.rating === 'number'
+  ) {
+    score += item.rating * 20;
+  }
+
+  return score;
+}
 // TMDB's own matching depends partly on which `language` is active, so one
 // search in English misses titles that only match their Russian translation
 // (and vice versa). Firing both in parallel and merging covers Section 8's
@@ -121,53 +321,146 @@ async function fetchSearch(query, language) {
 // pass — it's a heuristic, not a guarantee (TMDB decides what matches), but
 // it noticeably widens what turns up.
 export async function searchTMDB(query) {
-  if (!isConfigured() || !query.trim()) return [];
+  if (!isConfigured() || !query.trim()) {
+    return [];
+  }
+
+  const {
+    title,
+    year,
+  } = parseSearchQuery(query);
+
+  if (!title) {
+    return [];
+  }
 
   try {
-    const [en, ru] = await Promise.allSettled([
-      fetchSearch(query, 'en-US'),
-      fetchSearch(query, 'ru-RU'),
-    ]);
+    const searches = [];
 
-    const combined = [
-      ...(en.status === 'fulfilled' ? en.value : []),
-      ...(ru.status === 'fulfilled' ? ru.value : []),
+    const languages = [
+      'en-US',
+      'ru-RU',
     ];
 
-    const merged = new Map();
+    const types = [
+      'movie',
+      'tv',
+    ];
+
+    for (const language of languages) {
+      for (const type of types) {
+        searches.push(
+          fetchSearch(
+            title,
+            language,
+            type,
+            year
+          )
+        );
+      }
+    }
+
+    const settled =
+      await Promise.allSettled(
+        searches
+      );
+
+    const combined =
+      settled
+        .filter(
+          (result) =>
+            result.status ===
+            'fulfilled'
+        )
+        .flatMap(
+          (result) =>
+            result.value
+        );
+
+    // -------------------------------------------------
+    // Убираем дубли
+    // -------------------------------------------------
+
+    const merged =
+      new Map();
 
     for (const item of combined) {
-      const key = `${item.type}-${item.providerId}`;
+      const key =
+        `${item.type}-${item.providerId}`;
 
       if (!merged.has(key)) {
         merged.set(key, item);
         continue;
       }
 
-      const existing = merged.get(key);
+      const existing =
+        merged.get(key);
 
-      merged.set(key, {
-        ...existing,
+      merged.set(
+        key,
+        {
+          ...existing,
 
-        // Русская версия приходит второй — она должна иметь приоритет
-        title:
-          item.title !== item.originalTitle
-            ? item.title
-            : existing.title,
+          title:
+            item.title !==
+            item.originalTitle
+              ? item.title
+              : existing.title,
 
-        description:
-          item.description && item.description.length > existing.description.length
-            ? item.description
-            : existing.description,
+          description:
+            item.description &&
+            item.description.length >
+              existing.description.length
+              ? item.description
+              : existing.description,
 
-        poster: existing.poster || item.poster,
-        backdrop: existing.backdrop || item.backdrop,
-      });
+          poster:
+            existing.poster ||
+            item.poster,
+
+          backdrop:
+            existing.backdrop ||
+            item.backdrop,
+
+          rating:
+            item.rating ??
+            existing.rating,
+        }
+      );
     }
 
-    return [...merged.values()];
+    // -------------------------------------------------
+    // Ранжирование
+    // -------------------------------------------------
+
+    const results =
+      [...merged.values()]
+        .map((item) => ({
+          item,
+          score:
+            calculateSearchScore(
+              item,
+              title,
+              year
+            ),
+        }))
+        .sort(
+          (a, b) =>
+            b.score - a.score
+        )
+        .map(
+          ({ item }) =>
+            item
+        );
+
+    return results;
+
   } catch (err) {
-    console.warn('[tmdb] search error', err);
+    console.warn(
+      '[tmdb] search error',
+      err
+    );
+
     return [];
   }
 }

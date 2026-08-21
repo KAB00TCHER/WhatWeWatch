@@ -103,13 +103,21 @@ export function renderList(container, items, { onSelect } = {}) {
 
         <h3>${escapeHtml(item.title)}</h3>
 
-        <p>
-          ${escapeHtml(
-            [item.year, secondaryLine(item)]
-              .filter(Boolean)
-              .join(' · ')
-          )}
-        </p>
+<p>
+  ${escapeHtml(
+    [item.year, secondaryLine(item)]
+      .filter(Boolean)
+      .join(' · ')
+  )}
+</p>
+
+${
+  genresLine(item)
+    ? `<p class="card__genres">${escapeHtml(genresLine(item))}</p>`
+    : ''
+}
+
+${note}
 
         ${note}
       </div>
