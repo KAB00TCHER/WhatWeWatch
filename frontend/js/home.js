@@ -16,6 +16,7 @@ let currentSearchResults = [];
 
 let librarySort = 'added-desc';
 let libraryGenre = '';
+let libraryStatus = '';
 let libraryView = 'cards';
 
 
@@ -70,6 +71,8 @@ function getEls() {
     libraryGenre:
       document.getElementById('library-genre'),
 
+      libraryStatuses:
+  document.getElementById('library-statuses'),
 
     randomPicker:
       document.getElementById('random-picker'),
@@ -248,6 +251,17 @@ function filterResults(items) {
       activeTypes.has(
         item.type
       )
+  );
+}
+
+function filterLibraryByStatus(items) {
+  if (!libraryStatus) {
+    return items;
+  }
+
+  return items.filter(
+    (item) =>
+      item.status === libraryStatus
   );
 }
 
@@ -494,8 +508,10 @@ const library =
 updateGenreFilter(library);
 
 const filteredLibrary =
-  filterLibraryByGenre(
-    filterResults(library)
+  filterLibraryByStatus(
+    filterLibraryByGenre(
+      filterResults(library)
+    )
   );
 
 const sortedLibrary =
@@ -701,6 +717,7 @@ const {
   clearSearch,
   librarySort: librarySortSelect,
   libraryGenre: libraryGenreSelect,
+  libraryStatuses,
   randomPicker,
   viewSwitcher,
 } = getEls();
@@ -881,6 +898,41 @@ libraryGenreSelect.addEventListener(
   }
 );
 
+
+
+// =======================================================
+// LIBRARY STATUS
+// =======================================================
+
+libraryStatuses.addEventListener(
+  'click',
+  async (e) => {
+    const button =
+      e.target.closest(
+        '.library-status'
+      );
+
+    if (!button) {
+      return;
+    }
+
+    libraryStatus =
+      button.dataset.status || '';
+
+    libraryStatuses
+      .querySelectorAll(
+        '.library-status'
+      )
+      .forEach((btn) => {
+        btn.classList.toggle(
+          'is-active',
+          btn === button
+        );
+      });
+
+    await render();
+  }
+);
 // =======================================================
 // LIBRARY VIEW
 // =======================================================

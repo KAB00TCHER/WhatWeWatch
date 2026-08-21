@@ -119,7 +119,6 @@ ${
 
 ${note}
 
-        ${note}
       </div>
 
       <div class="library-list-item__status">

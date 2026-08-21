@@ -210,6 +210,48 @@ img {
   border-bottom: 1px solid var(--color-border);
 }
 
+/* ---- Library status filters ---- */
+
+.library-statuses {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.library-statuses::-webkit-scrollbar {
+  display: none;
+}
+
+.library-status {
+  flex: 0 0 auto;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.library-status:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+
+.library-status.is-active {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+
+
 /* ---- Card grid ---- */
 
 .card-grid {
@@ -1063,6 +1105,12 @@ img {
 }
 
 @media (max-width: 640px) {
+
+
+  .library-statuses {
+  margin-right: calc(var(--space-4) * -1);
+  padding-right: var(--space-4);
+}
   .library-toolbar {
     align-items: stretch;
   }

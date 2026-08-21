@@ -85,6 +85,61 @@
       <h2>Моя библиотека</h2>
     </div>
 
+<nav
+  class="library-statuses"
+  id="library-statuses"
+  aria-label="Статус просмотра"
+>
+  <button
+    type="button"
+    class="library-status is-active"
+    data-status=""
+  >
+    Все
+  </button>
+
+  <button
+    type="button"
+    class="library-status"
+    data-status="planned"
+  >
+    Запланировано
+  </button>
+
+  <button
+    type="button"
+    class="library-status"
+    data-status="watching"
+  >
+    Смотрю
+  </button>
+
+  <button
+    type="button"
+    class="library-status"
+    data-status="completed"
+  >
+    Завершено
+  </button>
+
+  <button
+    type="button"
+    class="library-status"
+    data-status="on_hold"
+  >
+    На паузе
+  </button>
+
+  <button
+    type="button"
+    class="library-status"
+    data-status="dropped"
+  >
+    Дропнуто
+  </button>
+</nav>
+
+
     <div class="library-actions">
       <label class="sort-control">
   <span>Жанр</span>
@@ -136,9 +191,9 @@
 
   </div>
 
-  <section class="library-stats" id="library-stats"></section>
+<div class="card-grid" id="library-grid"></div>
 
-  <div class="card-grid" id="library-grid"></div>
+<section class="library-stats" id="library-stats"></section>
 
 </section>
 
