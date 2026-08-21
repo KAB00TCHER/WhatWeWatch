@@ -16,6 +16,8 @@ const TMDB_API_KEY = '3bf7ec6099886a05fecc861c2f61a533';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const POSTER_BASE = 'https://image.tmdb.org/t/p/w342';
 const BACKDROP_BASE = 'https://image.tmdb.org/t/p/w780';
+const SEARCH_PAGES = 3;
+
 
 function isConfigured() {
   return Boolean(TMDB_API_KEY) && TMDB_API_KEY !== 'YOUR_TMDB_API_KEY_HERE';
@@ -57,13 +59,36 @@ function mapResultToModel(raw) {
   };
 }
 
-async function fetchSearch(query, language) {
+async function fetchSearchPage(query, language, page) {
   const res = await fetch(
-    buildUrl('/search/multi', { query, language, include_adult: 'true' })
+    buildUrl('/search/multi', {
+      query,
+      language,
+      include_adult: 'true',
+      page,
+    })
   );
-  if (!res.ok) throw new Error(`TMDB search failed: ${res.status}`);
+
+  if (!res.ok) {
+    throw new Error(`TMDB search failed: ${res.status}`);
+  }
+
   const data = await res.json();
-  return (data.results || []).map(mapResultToModel).filter(Boolean);
+
+  return (data.results || [])
+    .map(mapResultToModel)
+    .filter(Boolean);
+}
+
+async function fetchSearch(query, language) {
+  const pages = await Promise.all(
+    Array.from(
+      { length: SEARCH_PAGES },
+      (_, index) => fetchSearchPage(query, language, index + 1)
+    )
+  );
+
+  return pages.flat();
 }
 
 // TMDB's own matching depends partly on which `language` is active, so one
