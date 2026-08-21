@@ -607,7 +607,11 @@ export async function getLibraryWithDetails() {
     record.provider
   );
 
-if (!media || !Array.isArray(media.genres)) {
+if (
+  !media ||
+  !Array.isArray(media.genres) ||
+  media.genres.length === 0
+) {
   media =
     await restoreMediaItem(
       record.mediaId,
