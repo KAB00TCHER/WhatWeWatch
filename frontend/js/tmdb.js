@@ -18,6 +18,28 @@ const POSTER_BASE = 'https://image.tmdb.org/t/p/w342';
 const BACKDROP_BASE = 'https://image.tmdb.org/t/p/w780';
 const SEARCH_PAGES = 3;
 
+function normalizeGenres(genres) {
+  if (!Array.isArray(genres)) {
+    return [];
+  }
+
+  const result = new Map();
+
+  for (const genre of genres) {
+    const name = String(genre?.name || genre || '').trim();
+
+    if (!name) continue;
+
+    const key = name.toLocaleLowerCase('ru-RU');
+
+    if (!result.has(key)) {
+      result.set(key, name);
+    }
+  }
+
+  return [...result.values()];
+}
+
 
 function isConfigured() {
   return Boolean(TMDB_API_KEY) && TMDB_API_KEY !== 'YOUR_TMDB_API_KEY_HERE';
@@ -214,10 +236,7 @@ export async function getTMDBDetails(providerId, type) {
       description:
         raw.overview || '',
 
-      genres:
-  Array.isArray(raw.genres)
-    ? raw.genres.map((genre) => genre.name)
-    : [],
+      genres: normalizeGenres(raw.genres),
 
       runtime:
         isMovie

@@ -8,6 +8,32 @@
 
 const POSTER_BASE = 'https://shikimori.one';
 
+function normalizeGenres(genres) {
+  if (!Array.isArray(genres)) {
+    return [];
+  }
+
+  const result = new Map();
+
+  for (const genre of genres) {
+    const name = String(
+      genre?.russian ||
+      genre?.name ||
+      genre ||
+      ''
+    ).trim();
+
+    if (!name) continue;
+
+    const key = name.toLocaleLowerCase('ru-RU');
+
+    if (!result.has(key)) {
+      result.set(key, name);
+    }
+  }
+
+  return [...result.values()];
+}
 
 function cleanShikimoriDescription(text) {
   return String(text || '')
@@ -46,9 +72,7 @@ function mapResultToModel(raw) {
 
     description: cleanShikimoriDescription(raw.description),
 
-    genres: Array.isArray(raw.genres)
-  ? raw.genres.map((genre) => genre.russian || genre.name).filter(Boolean)
-  : [],
+genres: normalizeGenres(raw.genres),
 
     runtime: raw.duration || null,
 
@@ -159,9 +183,7 @@ export async function getShikimoriDetails(providerId) {
       description:
         cleanShikimoriDescription(raw.description),
 
-      genres: Array.isArray(raw.genres)
-  ? raw.genres.map((genre) => genre.russian || genre.name).filter(Boolean)
-  : [],
+genres: normalizeGenres(raw.genres),
 
       runtime:
         raw.duration || null,

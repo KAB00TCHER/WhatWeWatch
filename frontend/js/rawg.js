@@ -27,6 +27,33 @@ function proxied(url) {
   return PROXY_PREFIX + encodeURIComponent(url);
 }
 
+
+function normalizeGenres(genres) {
+  if (!Array.isArray(genres)) {
+    return [];
+  }
+
+  const result = new Map();
+
+  for (const genre of genres) {
+    const name = String(
+      genre?.name ||
+      genre ||
+      ''
+    ).trim();
+
+    if (!name) continue;
+
+    const key = name.toLocaleLowerCase('ru-RU');
+
+    if (!result.has(key)) {
+      result.set(key, name);
+    }
+  }
+
+  return [...result.values()];
+}
+
 function buildUrl(path, params = {}) {
   const url = new URL(BASE_URL + path);
   url.searchParams.set('key', RAWG_API_KEY);
@@ -172,10 +199,7 @@ export async function getRAWGDetails(providerId) {
         raw.description_raw || '',
 
 
-      genres:
-  Array.isArray(raw.genres)
-    ? raw.genres.map((genre) => genre.name).filter(Boolean)
-    : [],
+genres: normalizeGenres(raw.genres),
 
       runtime: null,
 

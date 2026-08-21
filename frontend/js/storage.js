@@ -458,10 +458,10 @@ function parseMediaId(mediaId, provider) {
   const value = String(mediaId);
 
   if (provider === 'tmdb') {
-    const match =
-      value.match(
-        /^tmdb-(movie|tv)-(.+)$/
-      );
+const match =
+  value.match(
+    /^tmdb-(movie|series|tv)-(.+)$/
+  );
 
     if (!match) {
       return null;
@@ -470,10 +470,11 @@ function parseMediaId(mediaId, provider) {
     return {
       providerId: match[2],
 
-      type:
-        match[1] === 'tv'
-          ? 'series'
-          : 'movie',
+    type:
+  match[1] === 'tv' ||
+  match[1] === 'series'
+    ? 'series'
+    : 'movie',
     };
   }
 
