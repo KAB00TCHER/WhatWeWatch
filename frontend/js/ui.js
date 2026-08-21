@@ -26,6 +26,16 @@ function secondaryLine(item) {
   return '';
 }
 
+function genresLine(item) {
+  if (!Array.isArray(item.genres) || !item.genres.length) {
+    return '';
+  }
+
+  return item.genres
+    .slice(0, 2)
+    .join(' · ');
+}
+
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str ?? '';
@@ -347,7 +357,19 @@ const note = item.note?.trim()
     <div class="card__body">
       <span class="card__type">${TYPE_LABELS[item.type] || item.type}</span>
       <h3 class="card__title">${escapeHtml(item.title)}</h3>
-      <p class="card__meta">${escapeHtml([item.year, secondaryLine(item)].filter(Boolean).join(' · '))}</p>
+      <p class="card__meta">
+  ${escapeHtml(
+    [item.year, secondaryLine(item)]
+      .filter(Boolean)
+      .join(' · ')
+  )}
+</p>
+
+${
+  genresLine(item)
+    ? `<p class="card__genres">${escapeHtml(genresLine(item))}</p>`
+    : ''
+}
      ${item.status ? `<span class="card__status card__status--${item.status}">${STATUS_LABELS[item.status] || item.status}</span>` : ''}
       ${externalRating}
       ${userRating}

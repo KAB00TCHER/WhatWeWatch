@@ -15,7 +15,7 @@ let currentView = 'library'; // 'library' | 'search'
 let currentSearchResults = [];
 
 let librarySort = 'added-desc';
-
+let libraryGenre = '';
 let libraryView = 'cards';
 
 
@@ -65,6 +65,11 @@ function getEls() {
 
     librarySort:
       document.getElementById('library-sort'),
+
+
+    libraryGenre:
+      document.getElementById('library-genre'),
+
 
     randomPicker:
       document.getElementById('random-picker'),
@@ -247,6 +252,75 @@ function filterResults(items) {
 }
 
 
+function filterLibraryByGenre(items) {
+  if (!libraryGenre) {
+    return items;
+  }
+
+  return items.filter((item) => {
+    if (!Array.isArray(item.genres)) {
+      return false;
+    }
+
+    return item.genres.includes(libraryGenre);
+  });
+}
+
+function updateGenreFilter(items) {
+  const {
+    libraryGenre: select,
+  } = getEls();
+
+  if (!select) {
+    return;
+  }
+
+  const genres = [
+    ...new Set(
+      items
+        .flatMap((item) =>
+          Array.isArray(item.genres)
+            ? item.genres
+            : []
+        )
+        .filter(Boolean)
+    ),
+  ].sort((a, b) =>
+    a.localeCompare(
+      b,
+      'ru',
+      { sensitivity: 'base' }
+    )
+  );
+
+  const currentValue = libraryGenre;
+
+  select.innerHTML = '';
+
+  const allOption =
+    document.createElement('option');
+
+  allOption.value = '';
+  allOption.textContent = 'Все жанры';
+
+  select.appendChild(allOption);
+
+  genres.forEach((genre) => {
+    const option =
+      document.createElement('option');
+
+    option.value = genre;
+    option.textContent = genre;
+
+    select.appendChild(option);
+  });
+
+  select.value =
+    genres.includes(currentValue)
+      ? currentValue
+      : '';
+}
+
 function sortLibrary(items) {
   const sorted = [...items];
 
@@ -394,8 +468,12 @@ async function render() {
 const library =
   await getLibraryView();
 
+updateGenreFilter(library);
+
 const filteredLibrary =
-  filterResults(library);
+  filterLibraryByGenre(
+    filterResults(library)
+  );
 
 const sortedLibrary =
   sortLibrary(filteredLibrary);
@@ -599,6 +677,7 @@ const {
   typeFilters,
   clearSearch,
   librarySort: librarySortSelect,
+  libraryGenre: libraryGenreSelect,
   randomPicker,
   viewSwitcher,
 } = getEls();
@@ -764,6 +843,20 @@ librarySortSelect.addEventListener(
   }
 );
 
+
+// =======================================================
+// LIBRARY GENRE
+// =======================================================
+
+libraryGenreSelect.addEventListener(
+  'change',
+  async () => {
+    libraryGenre =
+      libraryGenreSelect.value;
+
+    await render();
+  }
+);
 
 // =======================================================
 // LIBRARY VIEW

@@ -46,6 +46,10 @@ function mapResultToModel(raw) {
 
     description: cleanShikimoriDescription(raw.description),
 
+    genres: Array.isArray(raw.genres)
+  ? raw.genres.map((genre) => genre.russian || genre.name).filter(Boolean)
+  : [],
+
     runtime: raw.duration || null,
 
     episodes: raw.episodes || null,
@@ -154,6 +158,10 @@ export async function getShikimoriDetails(providerId) {
 
       description:
         cleanShikimoriDescription(raw.description),
+
+      genres: Array.isArray(raw.genres)
+  ? raw.genres.map((genre) => genre.russian || genre.name).filter(Boolean)
+  : [],
 
       runtime:
         raw.duration || null,

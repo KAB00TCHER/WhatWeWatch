@@ -549,7 +549,7 @@ async function restoreMediaItem(
     backdrop: null,
 
     description: '',
-
+    genres: [],
     runtime: null,
     episodes: null,
     playtime: null,
@@ -602,18 +602,18 @@ export async function getLibraryWithDetails() {
       records.map(async (record) => {
 
         let media =
-          getCachedMediaItem(
-            record.mediaId,
-            record.provider
-          );
+  getCachedMediaItem(
+    record.mediaId,
+    record.provider
+  );
 
-        if (!media) {
-          media =
-            await restoreMediaItem(
-              record.mediaId,
-              record.provider
-            );
-        }
+if (!media || !Array.isArray(media.genres)) {
+  media =
+    await restoreMediaItem(
+      record.mediaId,
+      record.provider
+    );
+}
 
         if (!media) {
           return null;

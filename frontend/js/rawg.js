@@ -53,6 +53,7 @@ function mapResultToModel(raw) {
     poster: raw.background_image || null,
     backdrop: raw.background_image || null, // RAWG only gives one hero image
     description: null, // not included here — filled in by getRAWGDetails()
+    genres: [],
     runtime: null,
     episodes: null,
     playtime: raw.playtime || null, // RAWG reports this in hours already
@@ -169,6 +170,12 @@ export async function getRAWGDetails(providerId) {
 
       description:
         raw.description_raw || '',
+
+
+      genres:
+  Array.isArray(raw.genres)
+    ? raw.genres.map((genre) => genre.name).filter(Boolean)
+    : [],
 
       runtime: null,
 
