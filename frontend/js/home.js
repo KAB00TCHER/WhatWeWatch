@@ -257,12 +257,20 @@ function filterLibraryByGenre(items) {
     return items;
   }
 
+  const target =
+    libraryGenre.toLocaleLowerCase('ru-RU');
+
   return items.filter((item) => {
     if (!Array.isArray(item.genres)) {
       return false;
     }
 
-    return item.genres.includes(libraryGenre);
+    return item.genres.some(
+      (genre) =>
+        String(genre || '')
+          .trim()
+          .toLocaleLowerCase('ru-RU') === target
+    );
   });
 }
 
@@ -275,22 +283,35 @@ function updateGenreFilter(items) {
     return;
   }
 
-  const genres = [
-    ...new Set(
-      items
-        .flatMap((item) =>
-          Array.isArray(item.genres)
-            ? item.genres
-            : []
-        )
-        .filter(Boolean)
-    ),
-  ].sort((a, b) =>
-    a.localeCompare(
-      b,
-      'ru',
-      { sensitivity: 'base' }
-    )
+  const genresMap = new Map();
+
+  items.forEach((item) => {
+    if (!Array.isArray(item.genres)) {
+      return;
+    }
+
+    item.genres.forEach((genre) => {
+      const name = String(genre || '').trim();
+
+      if (!name) {
+        return;
+      }
+
+      const key = name.toLocaleLowerCase('ru-RU');
+
+      if (!genresMap.has(key)) {
+        genresMap.set(key, name);
+      }
+    });
+  });
+
+  const genres = [...genresMap.values()].sort(
+    (a, b) =>
+      a.localeCompare(
+        b,
+        'ru-RU',
+        { sensitivity: 'base' }
+      )
   );
 
   const currentValue = libraryGenre;
@@ -316,9 +337,11 @@ function updateGenreFilter(items) {
   });
 
   select.value =
-    genres.includes(currentValue)
-      ? currentValue
-      : '';
+    genres.find(
+      (genre) =>
+        genre.toLocaleLowerCase('ru-RU') ===
+        String(currentValue || '').toLocaleLowerCase('ru-RU')
+    ) || '';
 }
 
 function sortLibrary(items) {
