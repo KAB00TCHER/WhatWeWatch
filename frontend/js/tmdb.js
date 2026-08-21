@@ -53,6 +53,7 @@ function mapResultToModel(raw) {
     poster: raw.poster_path ? POSTER_BASE + raw.poster_path : null,
     backdrop: raw.backdrop_path ? BACKDROP_BASE + raw.backdrop_path : null,
     description: raw.overview || '',
+    genres: [],
     runtime: null,   // only available from getTMDBDetails()
     episodes: null,  // only available from getTMDBDetails()
     playtime: null,  // not applicable to TMDB
@@ -212,6 +213,11 @@ export async function getTMDBDetails(providerId, type) {
 
       description:
         raw.overview || '',
+
+      genres:
+  Array.isArray(raw.genres)
+    ? raw.genres.map((genre) => genre.name)
+    : [],
 
       runtime:
         isMovie
