@@ -417,50 +417,25 @@ export function openModal(
 ) {
   const inLibrary =
     Boolean(record);
-    const buildReyohohoUrl = () => {
-    const baseUrl =
-      'https://dav2010id.github.io/reyohoho/';
 
-    if (
-      item.type === 'anime' &&
-      item.provider === 'shikimori' &&
-      item.providerId
-    ) {
-      return (
-        baseUrl +
-        '#shiki' +
-        encodeURIComponent(
-          String(item.providerId)
-        )
-      );
-    }
 
-    if (
-      (item.type === 'movie' ||
-        item.type === 'series') &&
-      item.title
-    ) {
-      const searchQuery = [
-        item.title,
-        item.year
-      ]
-        .filter(Boolean)
-        .join(' ');
+ const buildReyohohoUrl = () => {
+  const baseUrl =
+    'https://dav2010id.github.io/reyohoho/';
 
-      return (
-        baseUrl +
-        '#search=' +
-        encodeURIComponent(
-          searchQuery
-        )
-      );
-    }
-
+  if (!item.title) {
     return baseUrl;
-  };
+  }
 
-  const reyohohoUrl =
-    buildReyohohoUrl();
+  return (
+    baseUrl +
+    '#search=' +
+    encodeURIComponent(item.title)
+  );
+};
+
+const reyohohoUrl =
+  buildReyohohoUrl();
 
   // =====================================================
   // HELPERS
@@ -1154,7 +1129,7 @@ const renderSimilar =
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                ▶ Смотреть на ReYoHoHo
+                 Смотреть ▶
               </a>
 
             </section>
