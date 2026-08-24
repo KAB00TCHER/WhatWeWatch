@@ -2438,3 +2438,73 @@ img {
   line-height:
     1.45;
 }
+
+
+/* =========================================================
+   CLICKABLE SIMILAR ITEMS
+   ========================================================= */
+
+.rich-modal__similar-card {
+  cursor: pointer;
+
+  transition:
+    transform .15s ease,
+    opacity .15s ease;
+}
+
+.rich-modal__similar-card:hover {
+  transform:
+    translateY(-4px);
+}
+
+.rich-modal__similar-card:active {
+  transform:
+    translateY(-1px);
+}
+
+.rich-modal__similar-card:focus-visible {
+  outline:
+    2px solid
+    var(--color-accent);
+
+  outline-offset:
+    3px;
+}
+
+
+.app-header__brand {
+  appearance: none;
+
+  border: 0;
+  padding: 0;
+
+  margin: 0;
+
+  background: transparent;
+
+  color:
+    inherit;
+
+  font:
+    inherit;
+
+  cursor: pointer;
+
+  text-align: left;
+}
+
+.app-header__brand:hover {
+  opacity: .8;
+}
+
+.app-header__brand:focus-visible {
+  outline:
+    2px solid
+    var(--color-accent);
+
+  outline-offset:
+    4px;
+
+  border-radius:
+    3px;
+}

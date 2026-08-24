@@ -84,8 +84,15 @@ function getEls() {
     viewSwitcher:
       document.querySelector('.view-switcher'),
 
-    clearSearch:
-      document.getElementById('clear-search'),
+clearSearch:
+  document.getElementById(
+    'clear-search'
+  ),
+
+homeButton:
+  document.getElementById(
+    'home-button'
+  ),
 
     modalOverlay:
       document.getElementById('modal-overlay'),
@@ -102,7 +109,32 @@ function getEls() {
 
   return els;
 }
+// =======================================================
+// HOME BUTTON
+// =======================================================
 
+homeButton.addEventListener(
+  'click',
+  async () => {
+
+    currentView =
+      'library';
+
+    currentSearchResults =
+      [];
+
+    searchInput.value =
+      '';
+
+    await render();
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+
+  }
+);
 
 // =========================================================
 // LOADING
@@ -842,13 +874,16 @@ const fullItem =
   await enrichDetails(item);
 
 
-  ui.openModal(
-    modalOverlay,
-    modal,
-    {
-      item: fullItem,
+ui.openModal(
+  modalOverlay,
+  modal,
+  {
+    item: fullItem,
 
-      record,
+    record,
+
+    onOpenItem:
+      openDetail,
 
 
       // -------------------------------------
@@ -968,6 +1003,9 @@ const {
   searchInput,
   typeFilters,
   clearSearch,
+
+  homeButton,
+
   librarySort: librarySortSelect,
   libraryGenre: libraryGenreSelect,
   libraryStatuses,

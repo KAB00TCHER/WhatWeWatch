@@ -412,6 +412,7 @@ export function openModal(
     onAdd,
     onSave,
     onRemove,
+    onOpenItem,
   }
 ) {
   const inLibrary =
@@ -746,45 +747,20 @@ export function openModal(
             ${item.similar
               .map(
                 similar => `
-                  <div class="rich-modal__similar-card">
-
-                    ${
-                      similar.poster
-                        ? `
-                          <img
-                            src="${similar.poster}"
-                            alt="${escapeHtml(
-                              similar.title
-                            )}"
-                            loading="lazy"
-                          >
-                        `
-                        : `
-                          <div class="rich-modal__similar-placeholder">
-                          </div>
-                        `
-                    }
-
-                    <strong>
-                      ${escapeHtml(
-                        similar.title
-                      )}
-                    </strong>
-
-                    <span>
-                      ${escapeHtml(
-                        [
-                          similar.year,
-                          similar.rating
-                            ? `★ ${similar.rating}`
-                            : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')
-                      )}
-                    </span>
-
-                  </div>
+                 <div
+  class="rich-modal__similar-card"
+  data-similar-id="${escapeHtml(
+    String(similar.id)
+  )}"
+  data-similar-provider="${escapeHtml(
+    String(similar.provider || '')
+  )}"
+  tabindex="0"
+  role="button"
+  aria-label="Открыть ${escapeHtml(
+    similar.title
+  )}"
+>
                 `
               )
               .join('')}
@@ -1161,6 +1137,81 @@ export function openModal(
 
     </div>
   `;
+
+// =====================================================
+// SIMILAR ITEMS
+// =====================================================
+
+modalEl
+  .querySelectorAll(
+    '[data-similar-id]'
+  )
+  .forEach(card => {
+
+    const activate =
+      async () => {
+
+        if (
+          typeof onOpenItem !==
+          'function'
+        ) {
+          return;
+        }
+
+        const similarId =
+          card.dataset.similarId;
+
+        const similarProvider =
+          card.dataset.similarProvider;
+
+        const similarItem =
+          Array.isArray(item.similar)
+            ? item.similar.find(
+                similar =>
+                  String(
+                    similar.id
+                  ) === similarId &&
+                  String(
+                    similar.provider || ''
+                  ) ===
+                    similarProvider
+              )
+            : null;
+
+        if (!similarItem) {
+          return;
+        }
+
+        await onOpenItem(
+          similarItem
+        );
+      };
+
+
+    card.addEventListener(
+      'click',
+      activate
+    );
+
+
+    card.addEventListener(
+      'keydown',
+      event => {
+
+        if (
+          event.key === 'Enter' ||
+          event.key === ' '
+        ) {
+          event.preventDefault();
+
+          activate();
+        }
+
+      }
+    );
+
+  });
+
 
 
   // =====================================================
