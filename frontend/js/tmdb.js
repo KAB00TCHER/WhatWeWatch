@@ -941,9 +941,114 @@ const recommendedItems =
       item =>
         item.poster
     );
-    // =====================================================
-    // ГДЕ ПОСМОТРЕТЬ
-    // =====================================================
+
+
+// =====================================================
+// СВЯЗАННЫЕ ФИЛЬМЫ
+// =====================================================
+
+const relatedItems =
+  collection &&
+  Array.isArray(
+    collection.parts
+  )
+
+    ? collection.parts
+
+        // Не показываем сам открытый фильм
+        .filter(
+          part =>
+            Number(part.id) !==
+            Number(providerId)
+        )
+
+        // Хронологический порядок
+        .sort(
+          (a, b) => {
+
+            const dateA =
+              a.release_date
+                ? new Date(
+                    a.release_date
+                  ).getTime()
+                : Infinity;
+
+            const dateB =
+              b.release_date
+                ? new Date(
+                    b.release_date
+                  ).getTime()
+                : Infinity;
+
+            return (
+              dateA -
+              dateB
+            );
+          }
+        )
+
+        // Приводим к нашей модели карточки
+        .map(
+          part => ({
+
+            id:
+              `tmdb-movie-${part.id}`,
+
+            provider:
+              'tmdb',
+
+            providerId:
+              part.id,
+
+            title:
+              part.title || '',
+
+            type:
+              'movie',
+
+            year:
+              part.release_date
+                ? Number(
+                    part.release_date.slice(
+                      0,
+                      4
+                    )
+                  )
+                : null,
+
+            rating:
+              typeof part.vote_average ===
+              'number'
+                ? Math.round(
+                    part.vote_average * 10
+                  ) / 10
+                : null,
+
+            poster:
+              part.poster_path
+                ? `${POSTER_BASE}${part.poster_path}`
+                : null,
+
+            backdrop:
+              part.backdrop_path
+                ? `${BACKDROP_BASE}${part.backdrop_path}`
+                : null,
+
+          })
+        )
+
+        // Карточке нужен постер
+        .filter(
+          item =>
+            item.poster
+        )
+
+    : [];
+
+
+// =====================================================
+// ГДЕ ПОСМОТРЕТЬ
+// =====================================================
 
     /*
       Приоритет:
