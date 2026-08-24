@@ -2526,21 +2526,3 @@ img {
   border-radius: 3px;
 }
 
-
-
-.rich-modal__watch {
-  margin-bottom: 8px;
-}
-
-.rich-modal__watch-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: fit-content;
-  min-height: 38px;
-  padding: 8px 16px;
-  border-radius: 8px;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 600;
-}

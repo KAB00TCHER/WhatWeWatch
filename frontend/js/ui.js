@@ -517,6 +517,26 @@ const reyohohoUrl =
             ${label}
           </span>
         </div>
+         ${
+        item.type === 'movie' ||
+        item.type === 'series' ||
+        item.type === 'anime'
+          ? `
+            <section class="rich-modal__section rich-modal__watch">
+
+              <a
+                class="button button--primary rich-modal__watch-button"
+                href="${reyohohoUrl}"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                 Смотреть ▶
+              </a>
+
+            </section>
+          `
+          : ''
+      }
       `;
     };
 
@@ -1116,26 +1136,7 @@ const renderSimilar =
 
     <div class="rich-modal__body">
 
-      ${
-        item.type === 'movie' ||
-        item.type === 'series' ||
-        item.type === 'anime'
-          ? `
-            <section class="rich-modal__section rich-modal__watch">
-
-              <a
-                class="button button--primary rich-modal__watch-button"
-                href="${reyohohoUrl}"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                 Смотреть ▶
-              </a>
-
-            </section>
-          `
-          : ''
-      }
+     
 
 
       ${
