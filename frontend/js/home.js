@@ -109,32 +109,7 @@ homeButton:
 
   return els;
 }
-// =======================================================
-// HOME BUTTON
-// =======================================================
 
-homeButton.addEventListener(
-  'click',
-  async () => {
-
-    currentView =
-      'library';
-
-    currentSearchResults =
-      [];
-
-    searchInput.value =
-      '';
-
-    await render();
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
-
-  }
-);
 
 // =========================================================
 // LOADING
@@ -1106,6 +1081,32 @@ const {
     }
   );
 
+// =======================================================
+// HOME BUTTON
+// =======================================================
+
+homeButton.addEventListener(
+  'click',
+  async () => {
+
+    currentView =
+      'library';
+
+    currentSearchResults =
+      [];
+
+    searchInput.value =
+      '';
+
+    await render();
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+
+  }
+);
 
   // =======================================================
   // TYPE FILTERS

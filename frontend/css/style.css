@@ -2472,29 +2472,47 @@ img {
 }
 
 
+/* =========================================================
+   HEADER BRAND BUTTON
+   ========================================================= */
+
 .app-header__brand {
   appearance: none;
 
-  border: 0;
+  margin: 0;
   padding: 0;
 
-  margin: 0;
+  border: 0;
 
   background: transparent;
 
-  color:
-    inherit;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 400;
 
-  font:
-    inherit;
+  line-height: 1;
+
+  letter-spacing: 0.05em;
+
+  color: var(--color-accent);
+
+  white-space: nowrap;
+
+  text-align: left;
 
   cursor: pointer;
 
-  text-align: left;
+  transition:
+    color .15s ease,
+    opacity .15s ease;
 }
 
 .app-header__brand:hover {
-  opacity: .8;
+  color: var(--color-accent-hover);
+}
+
+.app-header__brand:focus {
+  outline: none;
 }
 
 .app-header__brand:focus-visible {
@@ -2503,8 +2521,7 @@ img {
     var(--color-accent);
 
   outline-offset:
-    4px;
+    5px;
 
-  border-radius:
-    3px;
+  border-radius: 3px;
 }
