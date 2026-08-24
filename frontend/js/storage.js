@@ -650,21 +650,45 @@ export async function getRandomLibraryCandidates() {
 export async function getLibraryItemWithDetails(
   record
 ) {
+  if (!record) {
+    return null;
+  }
+
+  const mediaId =
+    String(record.mediaId || '');
+
+  const provider =
+    record.provider;
+
+  if (!mediaId || !provider) {
+    return null;
+  }
+
   let media =
     getCachedMediaItem(
-      record.mediaId,
-      record.provider
+      mediaId,
+      provider
     );
 
-  if (
-    !media ||
-    !Array.isArray(media.genres) ||
-    media.genres.length === 0
-  ) {
+  // Кэш может быть старым или неполным.
+  // Для random нам обязательно нужны
+  // базовые поля карточки.
+  const cacheIsValid =
+    media &&
+    media.id &&
+    media.provider &&
+    media.type &&
+    media.title;
+
+  if (!cacheIsValid) {
+    media = null;
+  }
+
+  if (!media) {
     media =
       await restoreMediaItem(
-        record.mediaId,
-        record.provider
+        mediaId,
+        provider
       );
   }
 
@@ -674,7 +698,28 @@ export async function getLibraryItemWithDetails(
 
   return {
     ...media,
-    ...record,
-    id: media.id,
+
+    id:
+      media.id ||
+      mediaId,
+
+    provider:
+      media.provider ||
+      provider,
+
+    status:
+      record.status,
+
+    userRating:
+      record.userRating,
+
+    note:
+      record.note || '',
+
+    addedAt:
+      record.addedAt,
+
+    updatedAt:
+      record.updatedAt,
   };
 }

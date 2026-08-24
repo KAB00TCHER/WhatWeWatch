@@ -1252,23 +1252,40 @@ randomPicker.addEventListener(
 const records =
   await storage.getRandomLibraryCandidates();
 
+if (!records.length) {
+  alert(
+    'В запланированном и поставленном на паузу пока ничего нет.'
+  );
+
+  return;
+}
+
 const candidates =
-  records.filter((record) => {
-    if (activeTypes.size === 0) {
-      return true;
-    }
+  activeTypes.size === 0
+    ? records
+    : records.filter((record) => {
+        const media =
+          storage.getCachedMediaItem(
+            record.mediaId,
+            record.provider
+          );
 
-    const media =
-      storage.getCachedMediaItem(
-        record.mediaId,
-        record.provider
-      );
+        return (
+          media &&
+          media.type &&
+          activeTypes.has(
+            media.type
+          )
+        );
+      });
 
-    return (
-      media &&
-      activeTypes.has(media.type)
-    );
-  });
+if (!candidates.length) {
+  alert(
+    'Нет карточек, соответствующих выбранным типам.'
+  );
+
+  return;
+}
 
 if (!candidates.length) {
   alert(
@@ -1286,10 +1303,15 @@ const randomRecord =
     )
   ];
 
+let currentRecord =
+  randomRecord;
+
 let currentItem =
   await storage.getLibraryItemWithDetails(
     randomRecord
   );
+
+  
 
 if (!currentItem) {
   alert(
@@ -1328,10 +1350,10 @@ onAgain:
       candidates.filter(
         record =>
           record.mediaId !==
-          currentItem.id
+          currentRecord.mediaId
       );
 
-    const randomRecord =
+    const nextRecord =
       available[
         Math.floor(
           Math.random() *
@@ -1341,14 +1363,18 @@ onAgain:
 
     const nextItem =
       await storage.getLibraryItemWithDetails(
-        randomRecord
+        nextRecord
       );
 
     if (!nextItem) {
       return;
     }
 
-    currentItem = nextItem;
+    currentRecord =
+      nextRecord;
+
+    currentItem =
+      nextItem;
 
     showRandom();
   },
