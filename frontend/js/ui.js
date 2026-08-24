@@ -417,7 +417,50 @@ export function openModal(
 ) {
   const inLibrary =
     Boolean(record);
+    const buildReyohohoUrl = () => {
+    const baseUrl =
+      'https://dav2010id.github.io/reyohoho/';
 
+    if (
+      item.type === 'anime' &&
+      item.provider === 'shikimori' &&
+      item.providerId
+    ) {
+      return (
+        baseUrl +
+        '#shiki' +
+        encodeURIComponent(
+          String(item.providerId)
+        )
+      );
+    }
+
+    if (
+      (item.type === 'movie' ||
+        item.type === 'series') &&
+      item.title
+    ) {
+      const searchQuery = [
+        item.title,
+        item.year
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      return (
+        baseUrl +
+        '#search=' +
+        encodeURIComponent(
+          searchQuery
+        )
+      );
+    }
+
+    return baseUrl;
+  };
+
+  const reyohohoUrl =
+    buildReyohohoUrl();
 
   // =====================================================
   // HELPERS
@@ -1097,6 +1140,27 @@ const renderSimilar =
 
 
     <div class="rich-modal__body">
+
+      ${
+        item.type === 'movie' ||
+        item.type === 'series' ||
+        item.type === 'anime'
+          ? `
+            <section class="rich-modal__section rich-modal__watch">
+
+              <a
+                class="button button--primary rich-modal__watch-button"
+                href="${reyohohoUrl}"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                ▶ Смотреть на ReYoHoHo
+              </a>
+
+            </section>
+          `
+          : ''
+      }
 
 
       ${

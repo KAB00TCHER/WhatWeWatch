@@ -2525,3 +2525,19 @@ img {
 
   border-radius: 3px;
 }
+
+
+
+.rich-modal__watch {
+  margin-bottom: 8px;
+}
+
+.rich-modal__watch-button {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-weight: 700;
+}
