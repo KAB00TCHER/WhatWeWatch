@@ -727,6 +727,114 @@ export function openModal(
       `;
     };
 
+    // =====================================================
+// СВЯЗАННЫЕ ФИЛЬМЫ
+// =====================================================
+
+const renderRelated =
+  () => {
+
+    if (
+      !Array.isArray(
+        item.related
+      ) ||
+      !item.related.length
+    ) {
+      return '';
+    }
+
+    return `
+      <section
+        class="rich-modal__section"
+      >
+
+        <h3>
+          Связанные фильмы
+        </h3>
+
+        <div
+          class="rich-modal__similar"
+        >
+
+          ${item.related
+            .map(
+              related => `
+
+                <div
+                  class="rich-modal__similar-card"
+                  data-similar-id="${escapeHtml(
+                    String(
+                      related.id
+                    )
+                  )}"
+                  data-similar-provider="${escapeHtml(
+                    String(
+                      related.provider ||
+                      ''
+                    )
+                  )}"
+                  tabindex="0"
+                  role="button"
+                  aria-label="Открыть ${escapeHtml(
+                    related.title
+                  )}"
+                >
+
+                  ${
+                    related.poster
+                      ? `
+                        <img
+                          src="${related.poster}"
+                          alt="${escapeHtml(
+                            related.title
+                          )}"
+                          loading="lazy"
+                        >
+                      `
+                      : `
+                        <div
+                          class="rich-modal__similar-placeholder"
+                        >
+                          ${escapeHtml(
+                            (
+                              related.title ||
+                              '?'
+                            )[0]
+                          )}
+                        </div>
+                      `
+                  }
+
+                  <strong>
+                    ${escapeHtml(
+                      related.title
+                    )}
+                  </strong>
+
+                  <span>
+                    ${escapeHtml(
+                      [
+                        related.year,
+                        related.rating
+                          ? `★ ${related.rating}`
+                          : ''
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
+                    )}
+                  </span>
+
+                </div>
+
+              `
+            )
+            .join('')}
+
+        </div>
+
+      </section>
+    `;
+  };
 
 const renderSimilar =
   () => {
@@ -1191,7 +1299,8 @@ const renderSimilar =
       </section>
 
 
-      ${renderSimilar()}
+      ${renderRelated()}
+${renderSimilar()}
 
     </div>
   `;
@@ -1216,25 +1325,37 @@ modalEl
           return;
         }
 
-        const similarId =
-          card.dataset.similarId;
+       const similarId =
+  card.dataset.similarId;
 
-        const similarProvider =
-          card.dataset.similarProvider;
+const similarProvider =
+  card.dataset.similarProvider;
 
-        const similarItem =
-          Array.isArray(item.similar)
-            ? item.similar.find(
-                similar =>
-                  String(
-                    similar.id
-                  ) === similarId &&
-                  String(
-                    similar.provider || ''
-                  ) ===
-                    similarProvider
-              )
-            : null;
+const sourceItems = [
+  ...(Array.isArray(
+    item.related
+  )
+    ? item.related
+    : []),
+
+  ...(Array.isArray(
+    item.similar
+  )
+    ? item.similar
+    : []),
+];
+
+const similarItem =
+  sourceItems.find(
+    candidate =>
+      String(
+        candidate.id
+      ) === similarId &&
+      String(
+        candidate.provider || ''
+      ) ===
+        similarProvider
+  );
 
         if (!similarItem) {
           return;

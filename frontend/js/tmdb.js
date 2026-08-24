@@ -492,13 +492,19 @@ const recommendationsPath =
       ? `/movie/${providerId}/watch/providers`
       : `/tv/${providerId}/watch/providers`;
 
+
+  const collectionPath =
+  type === 'movie'
+    ? null
+    : null;
+
   try {
-    const [
-      detailsResponse,
-      creditsResponse,
-      recommendationsResponse,
-      providersResponse,
-    ] = await Promise.all([
+const [
+  detailsResponse,
+  creditsResponse,
+  recommendationsResponse,
+  providersResponse,
+] = await Promise.all([
       fetch(
         buildUrl(path, {
           language: 'ru-RU',
@@ -529,10 +535,52 @@ fetch(
       );
     }
 
-    const raw =
-      await detailsResponse.json();
+const raw =
+  await detailsResponse.json();
 
-    const credits =
+
+// =====================================================
+// КОЛЛЕКЦИЯ / СВЯЗАННЫЕ ФИЛЬМЫ
+// =====================================================
+
+let collection =
+  null;
+
+if (
+  isMovie &&
+  raw.belongs_to_collection?.id
+) {
+  try {
+
+    const collectionResponse =
+      await fetch(
+        buildUrl(
+          `/collection/${raw.belongs_to_collection.id}`,
+          {
+            language: 'ru-RU',
+          }
+        )
+      );
+
+    if (
+      collectionResponse.ok
+    ) {
+      collection =
+        await collectionResponse.json();
+    }
+
+  } catch (error) {
+
+    console.warn(
+      '[tmdb] collection error',
+      error
+    );
+
+  }
+}
+
+
+const credits =
       creditsResponse.ok
         ? await creditsResponse.json()
         : {};
@@ -646,10 +694,119 @@ const recommendations =
             .filter(Boolean);
 
 
+
+            
     // =====================================================
     // ПОХОЖИЕ
     // =====================================================
+// =====================================================
+// СВЯЗАННЫЕ ФИЛЬМЫ
+// =====================================================
 
+const renderRelated =
+  () => {
+
+    if (
+      !Array.isArray(
+        item.related
+      ) ||
+      !item.related.length
+    ) {
+      return '';
+    }
+
+    return `
+      <section
+        class="rich-modal__section"
+      >
+
+        <h3>
+          Связанные фильмы
+        </h3>
+
+        <div
+          class="rich-modal__similar"
+        >
+
+          ${item.related
+            .map(
+              related => `
+
+                <div
+                  class="rich-modal__similar-card"
+                  data-similar-id="${escapeHtml(
+                    String(
+                      related.id
+                    )
+                  )}"
+                  data-similar-provider="${escapeHtml(
+                    String(
+                      related.provider ||
+                      ''
+                    )
+                  )}"
+                  tabindex="0"
+                  role="button"
+                  aria-label="Открыть ${escapeHtml(
+                    related.title
+                  )}"
+                >
+
+                  ${
+                    related.poster
+                      ? `
+                        <img
+                          src="${related.poster}"
+                          alt="${escapeHtml(
+                            related.title
+                          )}"
+                          loading="lazy"
+                        >
+                      `
+                      : `
+                        <div
+                          class="rich-modal__similar-placeholder"
+                        >
+                          ${escapeHtml(
+                            (
+                              related.title ||
+                              '?'
+                            )[0]
+                          )}
+                        </div>
+                      `
+                  }
+
+                  <strong>
+                    ${escapeHtml(
+                      related.title
+                    )}
+                  </strong>
+
+                  <span>
+                    ${escapeHtml(
+                      [
+                        related.year,
+                        related.rating
+                          ? `★ ${related.rating}`
+                          : ''
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
+                    )}
+                  </span>
+
+                </div>
+
+              `
+            )
+            .join('')}
+
+        </div>
+
+      </section>
+    `;
+  };
     // =====================================================
 // РЕКОМЕНДАЦИИ
 // =====================================================
@@ -1101,6 +1258,9 @@ const recommendedItems =
       cast,
 
       watchProviders,
+      related:
+  relatedItems,
+
 
       similar:
         recommendedItems,
