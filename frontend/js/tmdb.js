@@ -482,10 +482,10 @@ export async function getTMDBDetails(providerId, type) {
       ? `/movie/${providerId}/credits`
       : `/tv/${providerId}/credits`;
 
-  const similarPath =
-    type === 'movie'
-      ? `/movie/${providerId}/similar`
-      : `/tv/${providerId}/similar`;
+const recommendationsPath =
+  type === 'movie'
+    ? `/movie/${providerId}/recommendations`
+    : `/tv/${providerId}/recommendations`;
 
   const providersPath =
     type === 'movie'
@@ -496,7 +496,7 @@ export async function getTMDBDetails(providerId, type) {
     const [
       detailsResponse,
       creditsResponse,
-      similarResponse,
+      recommendationsResponse,
       providersResponse,
     ] = await Promise.all([
       fetch(
@@ -511,12 +511,12 @@ export async function getTMDBDetails(providerId, type) {
         })
       ),
 
-      fetch(
-        buildUrl(similarPath, {
-          language: 'ru-RU',
-          page: 1,
-        })
-      ),
+fetch(
+  buildUrl(recommendationsPath, {
+    language: 'ru-RU',
+    page: 1,
+  })
+),
 
       fetch(
         buildUrl(providersPath)
@@ -537,10 +537,10 @@ export async function getTMDBDetails(providerId, type) {
         ? await creditsResponse.json()
         : {};
 
-    const similar =
-      similarResponse.ok
-        ? await similarResponse.json()
-        : {};
+const recommendations =
+  recommendationsResponse.ok
+    ? await recommendationsResponse.json()
+    : {};
 
     const providers =
       providersResponse.ok
@@ -650,73 +650,248 @@ export async function getTMDBDetails(providerId, type) {
     // ПОХОЖИЕ
     // =====================================================
 
-    const similarItems =
-      (similar.results || [])
-        .slice(0, 6)
-        .map(item => {
-          const similarIsMovie =
-            type === 'movie';
+    // =====================================================
+// РЕКОМЕНДАЦИИ
+// =====================================================
 
-          const similarDate =
-            similarIsMovie
-              ? item.release_date
-              : item.first_air_date;
+const sourceYear =
+  dateStr
+    ? Number(
+        dateStr.slice(0, 4)
+      )
+    : null;
 
-          return {
-            id:
-              `tmdb-${
-                similarIsMovie
-                  ? 'movie'
-                  : 'series'
-              }-${item.id}`,
+const sourceGenres =
+  new Set(
+    (raw.genres || [])
+      .map(
+        genre =>
+          Number(
+            genre.id
+          )
+      )
+      .filter(Boolean)
+  );
 
-            provider: 'tmdb',
 
-            providerId:
-              item.id,
+const recommendedItems =
+  (recommendations.results || [])
+    .filter(
+      candidate =>
+        candidate &&
+        candidate.id &&
+        candidate.id !==
+          Number(providerId)
+    )
+    .map(candidate => {
 
-            title:
-              similarIsMovie
-                ? item.title
-                : item.name,
+      const candidateDate =
+        isMovie
+          ? candidate.release_date
+          : candidate.first_air_date;
 
-            type:
-              similarIsMovie
-                ? 'movie'
-                : 'series',
+      const candidateYear =
+        candidateDate
+          ? Number(
+              candidateDate.slice(0, 4)
+            )
+          : null;
 
-            year:
-              similarDate
-                ? Number(
-                    similarDate.slice(0, 4)
-                  )
-                : null,
 
-            rating:
-              typeof item.vote_average ===
-              'number'
-                ? Math.round(
-                    item.vote_average * 10
-                  ) / 10
-                : null,
+      // -----------------------------------------------
+      // Жанры
+      // -----------------------------------------------
 
-            poster:
-              item.poster_path
-                ? `${POSTER_BASE}${item.poster_path}`
-                : null,
+      const candidateGenres =
+        Array.isArray(
+          candidate.genre_ids
+        )
+          ? candidate.genre_ids
+          : [];
 
-            backdrop:
-              item.backdrop_path
-                ? `${BACKDROP_BASE}${item.backdrop_path}`
-                : null,
-          };
-        })
-        .filter(
-          item =>
-            item.poster
+
+      const commonGenres =
+        candidateGenres.filter(
+          genreId =>
+            sourceGenres.has(
+              Number(genreId)
+            )
+        ).length;
+
+
+      // -----------------------------------------------
+      // Рейтинг
+      // -----------------------------------------------
+
+      const rating =
+        typeof candidate.vote_average ===
+        'number'
+          ? candidate.vote_average
+          : 0;
+
+
+      // -----------------------------------------------
+      // Количество голосов
+      // -----------------------------------------------
+
+      const voteCount =
+        Number(
+          candidate.vote_count || 0
         );
 
 
+      // -----------------------------------------------
+      // Возраст
+      // -----------------------------------------------
+
+      let yearScore = 0;
+
+      if (
+        sourceYear &&
+        candidateYear
+      ) {
+        const difference =
+          Math.abs(
+            sourceYear -
+            candidateYear
+          );
+
+        if (difference <= 5) {
+          yearScore = 30;
+        } else if (
+          difference <= 10
+        ) {
+          yearScore = 20;
+        } else if (
+          difference <= 20
+        ) {
+          yearScore = 10;
+        }
+      }
+
+
+      // -----------------------------------------------
+      // Общий score
+      // -----------------------------------------------
+
+      const score =
+        commonGenres * 35 +
+        rating * 8 +
+        Math.min(
+          voteCount / 1000,
+          20
+        ) +
+        yearScore;
+
+
+      return {
+        candidate,
+        score,
+        commonGenres,
+        rating,
+        voteCount,
+        year: candidateYear,
+      };
+
+    })
+
+    // Слишком старые фильмы отбрасываем.
+    .filter(
+      item =>
+        !item.year ||
+        item.year >= 2000
+    )
+
+    // Совсем слабые рекомендации тоже.
+    .filter(
+      item =>
+        item.rating >= 6.0 &&
+        item.voteCount >= 100
+    )
+
+    // Сначала наиболее релевантные.
+    .sort(
+      (a, b) =>
+        b.score -
+        a.score
+    )
+
+    .slice(0, 6)
+
+    .map(
+      ({
+        candidate,
+      }) => {
+
+        const recommendedIsMovie =
+          type === 'movie';
+
+        const recommendedDate =
+          recommendedIsMovie
+            ? candidate.release_date
+            : candidate.first_air_date;
+
+        return {
+
+          id:
+            `tmdb-${
+              recommendedIsMovie
+                ? 'movie'
+                : 'series'
+            }-${candidate.id}`,
+
+          provider:
+            'tmdb',
+
+          providerId:
+            candidate.id,
+
+          title:
+            recommendedIsMovie
+              ? candidate.title
+              : candidate.name,
+
+          type:
+            recommendedIsMovie
+              ? 'movie'
+              : 'series',
+
+          year:
+            recommendedDate
+              ? Number(
+                  recommendedDate.slice(
+                    0,
+                    4
+                  )
+                )
+              : null,
+
+          rating:
+            typeof candidate.vote_average ===
+            'number'
+              ? Math.round(
+                  candidate.vote_average *
+                  10
+                ) / 10
+              : null,
+
+          poster:
+            candidate.poster_path
+              ? `${POSTER_BASE}${candidate.poster_path}`
+              : null,
+
+          backdrop:
+            candidate.backdrop_path
+              ? `${BACKDROP_BASE}${candidate.backdrop_path}`
+              : null,
+
+        };
+      }
+    )
+    .filter(
+      item =>
+        item.poster
+    );
     // =====================================================
     // ГДЕ ПОСМОТРЕТЬ
     // =====================================================
@@ -734,8 +909,7 @@ export async function getTMDBDetails(providerId, type) {
 
     const region =
       providers.results?.RU ||
-      providers.results?.NL ||
-      providers.results?.US ||
+      
       null;
 
     const providerGroups = [
@@ -929,7 +1103,7 @@ export async function getTMDBDetails(providerId, type) {
       watchProviders,
 
       similar:
-        similarItems,
+        recommendedItems,
     };
 
   } catch (error) {
