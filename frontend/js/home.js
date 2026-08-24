@@ -838,10 +838,8 @@ async function openDetail(item) {
   //
   // A fresh search result needs enrichment.
 
-  const fullItem =
-    record
-      ? item
-      : await enrichDetails(item);
+const fullItem =
+  await enrichDetails(item);
 
 
   ui.openModal(

@@ -468,68 +468,420 @@ export async function searchTMDB(query) {
 // Fetches the fields search results don't include (runtime, episode count),
 // used when opening a detail view or adding a title to the library.
 export async function getTMDBDetails(providerId, type) {
-  if (!isConfigured()) return null;
+  if (!isConfigured()) {
+    return null;
+  }
 
   const path =
     type === 'movie'
       ? `/movie/${providerId}`
       : `/tv/${providerId}`;
 
-  try {
-    const res = await fetch(
-      buildUrl(path, { language: 'ru-RU' })
-    );
+  const creditsPath =
+    type === 'movie'
+      ? `/movie/${providerId}/credits`
+      : `/tv/${providerId}/credits`;
 
-    if (!res.ok) {
+  const similarPath =
+    type === 'movie'
+      ? `/movie/${providerId}/similar`
+      : `/tv/${providerId}/similar`;
+
+  const providersPath =
+    type === 'movie'
+      ? `/movie/${providerId}/watch/providers`
+      : `/tv/${providerId}/watch/providers`;
+
+  try {
+    const [
+      detailsResponse,
+      creditsResponse,
+      similarResponse,
+      providersResponse,
+    ] = await Promise.all([
+      fetch(
+        buildUrl(path, {
+          language: 'ru-RU',
+        })
+      ),
+
+      fetch(
+        buildUrl(creditsPath, {
+          language: 'ru-RU',
+        })
+      ),
+
+      fetch(
+        buildUrl(similarPath, {
+          language: 'ru-RU',
+          page: 1,
+        })
+      ),
+
+      fetch(
+        buildUrl(providersPath)
+      ),
+    ]);
+
+    if (!detailsResponse.ok) {
       throw new Error(
-        `TMDB details failed: ${res.status}`
+        `TMDB details failed: ${detailsResponse.status}`
       );
     }
 
-    const raw = await res.json();
+    const raw =
+      await detailsResponse.json();
 
-    const isMovie = type === 'movie';
+    const credits =
+      creditsResponse.ok
+        ? await creditsResponse.json()
+        : {};
 
-    const dateStr = isMovie
-      ? raw.release_date
-      : raw.first_air_date;
+    const similar =
+      similarResponse.ok
+        ? await similarResponse.json()
+        : {};
+
+    const providers =
+      providersResponse.ok
+        ? await providersResponse.json()
+        : {};
+
+    const isMovie =
+      type === 'movie';
+
+    const dateStr =
+      isMovie
+        ? raw.release_date
+        : raw.first_air_date;
+
+
+    // =====================================================
+    // РЕЖИССЁР
+    // =====================================================
+
+    const director =
+      (credits.crew || [])
+        .filter(
+          person =>
+            person.job === 'Director'
+        )
+        .map(
+          person => person.name
+        )
+        .filter(Boolean)
+        .filter(
+          (name, index, array) =>
+            array.indexOf(name) === index
+        )
+        .join(', ');
+
+
+    // =====================================================
+    // СЦЕНАРИСТЫ
+    // =====================================================
+
+    const writers =
+      (credits.crew || [])
+        .filter(
+          person =>
+            [
+              'Writer',
+              'Screenplay',
+              'Story',
+              'Teleplay',
+            ].includes(person.job)
+        )
+        .map(
+          person => person.name
+        )
+        .filter(Boolean)
+        .filter(
+          (name, index, array) =>
+            array.indexOf(name) === index
+        )
+        .slice(0, 5);
+
+
+    // =====================================================
+    // АКТЁРЫ
+    // =====================================================
+
+    const cast =
+      (credits.cast || [])
+        .slice(0, 12)
+        .map(person => ({
+          id: person.id,
+
+          name:
+            person.name || '',
+
+          character:
+            person.character || '',
+
+          photo:
+            person.profile_path
+              ? `https://image.tmdb.org/t/p/w185${person.profile_path}`
+              : null,
+        }))
+        .filter(
+          person =>
+            person.name
+        );
+
+
+    // =====================================================
+    // СТРАНЫ
+    // =====================================================
+
+    const countries =
+      isMovie
+        ? (raw.production_countries || [])
+            .map(
+              country =>
+                country.name
+            )
+            .filter(Boolean)
+        : (raw.origin_country || [])
+            .filter(Boolean);
+
+
+    // =====================================================
+    // ПОХОЖИЕ
+    // =====================================================
+
+    const similarItems =
+      (similar.results || [])
+        .slice(0, 6)
+        .map(item => {
+          const similarIsMovie =
+            type === 'movie';
+
+          const similarDate =
+            similarIsMovie
+              ? item.release_date
+              : item.first_air_date;
+
+          return {
+            id:
+              `tmdb-${
+                similarIsMovie
+                  ? 'movie'
+                  : 'series'
+              }-${item.id}`,
+
+            provider: 'tmdb',
+
+            providerId:
+              item.id,
+
+            title:
+              similarIsMovie
+                ? item.title
+                : item.name,
+
+            type:
+              similarIsMovie
+                ? 'movie'
+                : 'series',
+
+            year:
+              similarDate
+                ? Number(
+                    similarDate.slice(0, 4)
+                  )
+                : null,
+
+            rating:
+              typeof item.vote_average ===
+              'number'
+                ? Math.round(
+                    item.vote_average * 10
+                  ) / 10
+                : null,
+
+            poster:
+              item.poster_path
+                ? `${POSTER_BASE}${item.poster_path}`
+                : null,
+
+            backdrop:
+              item.backdrop_path
+                ? `${BACKDROP_BASE}${item.backdrop_path}`
+                : null,
+          };
+        })
+        .filter(
+          item =>
+            item.poster
+        );
+
+
+    // =====================================================
+    // ГДЕ ПОСМОТРЕТЬ
+    // =====================================================
+
+    /*
+      Приоритет:
+
+      1. RU
+      2. NL
+      3. US
+
+      Это позволяет карточке работать и для российского
+      пользователя, и при просмотре из Нидерландов.
+    */
+
+    const region =
+      providers.results?.RU ||
+      providers.results?.NL ||
+      providers.results?.US ||
+      null;
+
+    const providerGroups = [
+      ...(region?.flatrate || []),
+      ...(region?.free || []),
+      ...(region?.ads || []),
+      ...(region?.rent || []),
+      ...(region?.buy || []),
+    ];
+
+    const providerMap =
+      new Map();
+
+    providerGroups.forEach(provider => {
+      if (
+        !providerMap.has(
+          provider.provider_id
+        )
+      ) {
+        providerMap.set(
+          provider.provider_id,
+          {
+            id:
+              provider.provider_id,
+
+            name:
+              provider.provider_name,
+
+            logo:
+              provider.logo_path
+                ? `https://image.tmdb.org/t/p/w92${provider.logo_path}`
+                : null,
+          }
+        );
+      }
+    });
+
+    const watchProviders =
+      [...providerMap.values()]
+        .slice(0, 10);
+
+
+    // =====================================================
+    // БЮДЖЕТ / СБОРЫ
+    // =====================================================
+
+    const formatMoney =
+      value => {
+        if (
+          !value ||
+          Number(value) <= 0
+        ) {
+          return null;
+        }
+
+        const number =
+          Number(value);
+
+        if (
+          number >=
+          1_000_000_000
+        ) {
+          return `$${(
+            number /
+            1_000_000_000
+          ).toFixed(1)} млрд`;
+        }
+
+        if (
+          number >=
+          1_000_000
+        ) {
+          return `$${(
+            number /
+            1_000_000
+          ).toFixed(1)} млн`;
+        }
+
+        return `$${number.toLocaleString(
+          'ru-RU'
+        )}`;
+      };
+
+
+    // =====================================================
+    // ИТОГОВАЯ МОДЕЛЬ
+    // =====================================================
 
     return {
-      id: `tmdb-${isMovie ? 'movie' : 'series'}-${raw.id}`,
-      provider: 'tmdb',
-      providerId: raw.id,
+      id:
+        `tmdb-${
+          isMovie
+            ? 'movie'
+            : 'series'
+        }-${raw.id}`,
 
-      title: isMovie
-        ? raw.title
-        : raw.name,
+      provider:
+        'tmdb',
 
-      originalTitle: isMovie
-        ? raw.original_title
-        : raw.original_name,
+      providerId:
+        raw.id,
+
+      title:
+        isMovie
+          ? raw.title
+          : raw.name,
+
+      originalTitle:
+        isMovie
+          ? raw.original_title
+          : raw.original_name,
 
       type,
 
-      year: dateStr
-        ? Number(dateStr.slice(0, 4))
-        : null,
-
-      rating:
-        typeof raw.vote_average === 'number'
-          ? Math.round(raw.vote_average * 10) / 10
+      year:
+        dateStr
+          ? Number(
+              dateStr.slice(0, 4)
+            )
           : null,
 
-      poster: raw.poster_path
-        ? POSTER_BASE + raw.poster_path
-        : null,
+      rating:
+        typeof raw.vote_average ===
+        'number'
+          ? Math.round(
+              raw.vote_average * 10
+            ) / 10
+          : null,
 
-      backdrop: raw.backdrop_path
-        ? BACKDROP_BASE + raw.backdrop_path
-        : null,
+      poster:
+        raw.poster_path
+          ? `${POSTER_BASE}${raw.poster_path}`
+          : null,
+
+      backdrop:
+        raw.backdrop_path
+          ? `${BACKDROP_BASE}${raw.backdrop_path}`
+          : null,
 
       description:
         raw.overview || '',
 
-      genres: normalizeGenres(raw.genres),
+      genres:
+        normalizeGenres(
+          raw.genres
+        ),
 
       runtime:
         isMovie
@@ -538,16 +890,52 @@ export async function getTMDBDetails(providerId, type) {
 
       episodes:
         type === 'series'
-          ? raw.number_of_episodes ?? null
+          ? raw.number_of_episodes ??
+            null
           : null,
 
-      playtime: null,
+      playtime:
+        null,
+
+      countries,
+
+      language:
+        raw.original_language
+          ? raw.original_language
+              .toUpperCase()
+          : null,
+
+      budget:
+        isMovie
+          ? formatMoney(
+              raw.budget
+            )
+          : null,
+
+      revenue:
+        isMovie
+          ? formatMoney(
+              raw.revenue
+            )
+          : null,
+
+      director:
+        director || null,
+
+      writers,
+
+      cast,
+
+      watchProviders,
+
+      similar:
+        similarItems,
     };
 
-  } catch (err) {
+  } catch (error) {
     console.warn(
       '[tmdb] details error',
-      err
+      error
     );
 
     return null;
