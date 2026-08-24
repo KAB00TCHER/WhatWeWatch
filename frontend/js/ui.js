@@ -431,10 +431,38 @@ export function openModal(overlayEl, modalEl, { item, record, onAdd, onSave, onR
               .join('')}
           </select>
         </label>
-        <label>
-          Моя оценка (0–10)
-          <input type="number" name="userRating" min="0" max="10" step="0.5" value="${record?.userRating ?? ''}" />
-        </label>
+<fieldset class="rating-field">
+  <legend>Моя оценка</legend>
+
+  <div
+    class="star-rating"
+    role="radiogroup"
+    aria-label="Моя оценка от 1 до 10"
+  >
+    ${Array.from({ length: 10 }, (_, index) => {
+      const value = index + 1;
+      const checked =
+        Number(record?.userRating) === value;
+
+      return `
+        <button
+          type="button"
+          class="star-rating__star${checked ? ' is-active' : ''}"
+          data-rating="${value}"
+          role="radio"
+          aria-checked="${checked}"
+          aria-label="${value} из 10"
+        >★</button>
+      `;
+    }).join('')}
+  </div>
+
+  <input
+    type="hidden"
+    name="userRating"
+    value="${record?.userRating ?? ''}"
+  />
+</fieldset>
         <label>
           Заметка
           <textarea name="note" rows="3">${escapeHtml(record?.note ?? '')}</textarea>
@@ -459,6 +487,48 @@ export function openModal(overlayEl, modalEl, { item, record, onAdd, onSave, onR
 
   modalEl.querySelector('[data-action="close"]').addEventListener('click', close);
   overlayEl.addEventListener('click', handleOverlayClick);
+
+const ratingInput =
+  modalEl.querySelector(
+    'input[name="userRating"]'
+  );
+
+const ratingStars =
+  modalEl.querySelectorAll(
+    '.star-rating__star'
+  );
+
+ratingStars.forEach((star) => {
+  star.addEventListener(
+    'click',
+    () => {
+      const rating =
+        Number(star.dataset.rating);
+
+      ratingInput.value = rating;
+
+      ratingStars.forEach((item) => {
+        const itemRating =
+          Number(item.dataset.rating);
+
+        const active =
+          itemRating <= rating;
+
+        item.classList.toggle(
+          'is-active',
+          active
+        );
+
+        item.setAttribute(
+          'aria-checked',
+          String(
+            itemRating === rating
+          )
+        );
+      });
+    }
+  );
+});
 
   modalEl.querySelector('#modal-form').addEventListener('submit', (e) => {
     e.preventDefault();

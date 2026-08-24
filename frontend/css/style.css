@@ -1090,6 +1090,125 @@ img {
   margin-top: var(--space-5);
 }
 
+/* =========================================================
+   LIBRARY PAGINATION
+   ========================================================= */
+
+.library-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin: 28px 0 8px;
+  flex-wrap: wrap;
+}
+
+.library-pagination__button {
+  min-width: 38px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--surface-color);
+  color: var(--text-color);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.library-pagination__button:hover:not(:disabled) {
+  border-color: var(--accent-color);
+}
+
+.library-pagination__button.is-active {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #fff;
+}
+
+.library-pagination__button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.library-pagination__dots {
+  min-width: 24px;
+  text-align: center;
+  color: var(--muted-color);
+}
+
+
+/* =========================================================
+   STAR RATING
+   ========================================================= */
+
+.rating-field {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.rating-field legend {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.star-rating {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: nowrap;
+}
+
+.star-rating__star {
+  width: 30px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--border-color);
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.12s ease,
+    transform 0.12s ease;
+}
+
+.star-rating__star:hover {
+  transform: scale(1.08);
+}
+
+.star-rating__star.is-active {
+  color: #f5b301;
+}
+
+@media (max-width: 600px) {
+  .library-pagination {
+    margin-top: 22px;
+  }
+
+  .library-pagination__button {
+    min-width: 36px;
+    height: 36px;
+  }
+
+  .star-rating {
+    gap: 0;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .star-rating__star {
+    flex: 1;
+    width: auto;
+    font-size: 23px;
+  }
+}
+
 @media (max-width: 900px) {
   .library-stats {
     grid-template-columns: repeat(5, 1fr);

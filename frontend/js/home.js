@@ -18,7 +18,9 @@ let librarySort = 'added-desc';
 let libraryGenre = '';
 let libraryStatus = '';
 let libraryView = 'cards';
+const LIBRARY_PAGE_SIZE = 24;
 
+let libraryPage = 1;
 
 let els = null;
 
@@ -60,6 +62,8 @@ function getEls() {
 
     libraryGrid:
       document.getElementById('library-grid'),
+      libraryPagination:
+  document.getElementById('library-pagination'),
 
     libraryStats:
   document.getElementById('library-stats'),
@@ -453,6 +457,244 @@ async function getLibraryView() {
 }
 
 
+
+function getLibraryPageItems(items) {
+  const totalPages = Math.max(
+    1,
+    Math.ceil(items.length / LIBRARY_PAGE_SIZE)
+  );
+
+  libraryPage = Math.min(
+    Math.max(1, libraryPage),
+    totalPages
+  );
+
+  const start =
+    (libraryPage - 1) *
+    LIBRARY_PAGE_SIZE;
+
+  return {
+    items: items.slice(
+      start,
+      start + LIBRARY_PAGE_SIZE
+    ),
+    totalPages,
+  };
+}
+
+function renderLibraryPagination(totalPages) {
+  const {
+    libraryPagination,
+  } = getEls();
+
+  if (!libraryPagination) {
+    return;
+  }
+
+  if (totalPages <= 1) {
+    libraryPagination.hidden = true;
+    libraryPagination.innerHTML = '';
+    return;
+  }
+
+  libraryPagination.hidden = false;
+  libraryPagination.innerHTML = '';
+
+  const fragment =
+    document.createDocumentFragment();
+
+  const createButton = (
+    label,
+    page,
+    {
+      disabled = false,
+      active = false,
+      ariaLabel = '',
+    } = {}
+  ) => {
+    const button =
+      document.createElement('button');
+
+    button.type = 'button';
+    button.className =
+      'library-pagination__button';
+
+    if (active) {
+      button.classList.add('is-active');
+    }
+
+    button.disabled = disabled;
+    button.textContent = label;
+
+    if (ariaLabel) {
+      button.setAttribute(
+        'aria-label',
+        ariaLabel
+      );
+    }
+
+    button.addEventListener(
+      'click',
+      async () => {
+        if (disabled) {
+          return;
+        }
+
+        libraryPage = page;
+
+        await render();
+
+        const librarySection =
+          document.getElementById(
+            'library-section'
+          );
+
+        if (librarySection) {
+          librarySection.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          });
+        }
+      }
+    );
+
+    return button;
+  };
+
+  fragment.appendChild(
+    createButton(
+      '‹',
+      libraryPage - 1,
+      {
+        disabled:
+          libraryPage <= 1,
+        ariaLabel:
+          'Предыдущая страница',
+      }
+    )
+  );
+
+  const maxVisiblePages = 5;
+
+  let startPage =
+    Math.max(
+      1,
+      libraryPage -
+        Math.floor(maxVisiblePages / 2)
+    );
+
+  let endPage =
+    Math.min(
+      totalPages,
+      startPage +
+        maxVisiblePages -
+        1
+    );
+
+  if (
+    endPage - startPage + 1 <
+    maxVisiblePages
+  ) {
+    startPage =
+      Math.max(
+        1,
+        endPage -
+          maxVisiblePages +
+          1
+      );
+  }
+
+  if (startPage > 1) {
+    fragment.appendChild(
+      createButton(
+        '1',
+        1,
+        {
+          active: libraryPage === 1,
+        }
+      )
+    );
+
+    if (startPage > 2) {
+      const dots =
+        document.createElement('span');
+
+      dots.className =
+        'library-pagination__dots';
+
+      dots.textContent = '…';
+
+      fragment.appendChild(dots);
+    }
+  }
+
+  for (
+    let page = startPage;
+    page <= endPage;
+    page += 1
+  ) {
+    if (
+      page === 1 &&
+      startPage > 1
+    ) {
+      continue;
+    }
+
+    fragment.appendChild(
+      createButton(
+        String(page),
+        page,
+        {
+          active:
+            page === libraryPage,
+        }
+      )
+    );
+  }
+
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) {
+      const dots =
+        document.createElement('span');
+
+      dots.className =
+        'library-pagination__dots';
+
+      dots.textContent = '…';
+
+      fragment.appendChild(dots);
+    }
+
+    fragment.appendChild(
+      createButton(
+        String(totalPages),
+        totalPages,
+        {
+          active:
+            libraryPage === totalPages,
+        }
+      )
+    );
+  }
+
+  fragment.appendChild(
+    createButton(
+      '›',
+      libraryPage + 1,
+      {
+        disabled:
+          libraryPage >= totalPages,
+        ariaLabel:
+          'Следующая страница',
+      }
+    )
+  );
+
+  libraryPagination.appendChild(
+    fragment
+  );
+}
+
 // =========================================================
 // RENDER
 // =========================================================
@@ -518,6 +760,19 @@ const sortedLibrary =
   sortLibrary(filteredLibrary);
 
 const {
+  items: pageItems,
+  totalPages,
+} =
+  getLibraryPageItems(
+    sortedLibrary
+  );
+
+renderLibraryPagination(
+  totalPages
+);
+
+
+const {
   libraryStats,
 } = getEls();
 
@@ -529,7 +784,7 @@ ui.renderStats(
 if (libraryView === 'list') {
   ui.renderList(
     libraryGrid,
-    sortedLibrary,
+    pageItems,
     {
       onSelect: openDetail,
     }
@@ -537,7 +792,7 @@ if (libraryView === 'list') {
 } else {
   ui.renderGrid(
     libraryGrid,
-    sortedLibrary,
+    pageItems,
     {
       onSelect: openDetail,
     }
@@ -865,7 +1120,7 @@ const {
         );
       }
 
-
+libraryPage = 1;
       await render();
     }
   );
@@ -879,6 +1134,7 @@ librarySortSelect.addEventListener(
   'change',
   async () => {
     librarySort = librarySortSelect.value;
+    libraryPage = 1;
     await render();
   }
 );
@@ -893,6 +1149,8 @@ libraryGenreSelect.addEventListener(
   async () => {
     libraryGenre =
       libraryGenreSelect.value;
+
+    libraryPage = 1;
 
     await render();
   }
@@ -918,6 +1176,8 @@ libraryStatuses.addEventListener(
 
     libraryStatus =
       button.dataset.status || '';
+
+    libraryPage = 1;
 
     libraryStatuses
       .querySelectorAll(
@@ -989,16 +1249,26 @@ randomPicker.addEventListener(
       return;
     }
 
-    const library =
-      await getLibraryView();
+const records =
+  await storage.getRandomLibraryCandidates();
 
-    const candidates =
-      filterResults(library)
-        .filter(
-          item =>
-            item.status === 'planned' ||
-            item.status === 'on_hold'
-        );
+const candidates =
+  records.filter((record) => {
+    if (activeTypes.size === 0) {
+      return true;
+    }
+
+    const media =
+      storage.getCachedMediaItem(
+        record.mediaId,
+        record.provider
+      );
+
+    return (
+      media &&
+      activeTypes.has(media.type)
+    );
+  });
 
     if (!candidates.length) {
       alert(
@@ -1008,6 +1278,9 @@ randomPicker.addEventListener(
       return;
     }
 
+
+
+    
     let currentItem =
       candidates[
         Math.floor(

@@ -634,3 +634,47 @@ if (
 
   return items.filter(Boolean);
 }
+
+export async function getRandomLibraryCandidates() {
+  const records =
+    await getLibraryRecords();
+
+  return records.filter(
+    (record) =>
+      record.status === STATUS.PLANNED ||
+      record.status === STATUS.ON_HOLD
+  );
+}
+
+
+export async function getLibraryItemWithDetails(
+  record
+) {
+  let media =
+    getCachedMediaItem(
+      record.mediaId,
+      record.provider
+    );
+
+  if (
+    !media ||
+    !Array.isArray(media.genres) ||
+    media.genres.length === 0
+  ) {
+    media =
+      await restoreMediaItem(
+        record.mediaId,
+        record.provider
+      );
+  }
+
+  if (!media) {
+    return null;
+  }
+
+  return {
+    ...media,
+    ...record,
+    id: media.id,
+  };
+}
