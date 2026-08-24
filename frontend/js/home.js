@@ -1270,24 +1270,34 @@ const candidates =
     );
   });
 
-    if (!candidates.length) {
-      alert(
-        'В запланированном и поставленном на паузу пока ничего нет.'
-      );
+if (!candidates.length) {
+  alert(
+    'В запланированном и поставленном на паузу пока ничего нет.'
+  );
 
-      return;
-    }
+  return;
+}
 
+const randomRecord =
+  candidates[
+    Math.floor(
+      Math.random() *
+      candidates.length
+    )
+  ];
 
+let currentItem =
+  await storage.getLibraryItemWithDetails(
+    randomRecord
+  );
 
-    
-    let currentItem =
-      candidates[
-        Math.floor(
-          Math.random() *
-          candidates.length
-        )
-      ];
+if (!currentItem) {
+  alert(
+    'Не удалось загрузить случайную карточку.'
+  );
+
+  return;
+}
 
     const {
       modalOverlay,
@@ -1305,32 +1315,43 @@ const candidates =
             onOpen:
               openDetail,
 
-            onAgain:
-              () => {
+onAgain:
+  async () => {
 
-                if (
-                  candidates.length === 1
-                ) {
-                  return;
-                }
+    if (
+      candidates.length === 1
+    ) {
+      return;
+    }
 
-                const available =
-                  candidates.filter(
-                    item =>
-                      item.id !==
-                      currentItem.id
-                  );
+    const available =
+      candidates.filter(
+        record =>
+          record.mediaId !==
+          currentItem.id
+      );
 
-                currentItem =
-                  available[
-                    Math.floor(
-                      Math.random() *
-                      available.length
-                    )
-                  ];
+    const randomRecord =
+      available[
+        Math.floor(
+          Math.random() *
+          available.length
+        )
+      ];
 
-                showRandom();
-              },
+    const nextItem =
+      await storage.getLibraryItemWithDetails(
+        randomRecord
+      );
+
+    if (!nextItem) {
+      return;
+    }
+
+    currentItem = nextItem;
+
+    showRandom();
+  },
           }
         );
       };
