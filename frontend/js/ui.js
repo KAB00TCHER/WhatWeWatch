@@ -1366,6 +1366,11 @@ const similarItem =
         await onOpenItem(
           similarItem
         );
+         requestAnimationFrame(
+          () => {
+            modalEl.scrollTop = 0;
+          }
+        );
       };
 
 
