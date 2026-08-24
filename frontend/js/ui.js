@@ -836,6 +836,8 @@ const renderRelated =
     `;
   };
 
+  
+
 const renderSimilar =
   () => {
 

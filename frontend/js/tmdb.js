@@ -538,6 +538,14 @@ fetch(
 const raw =
   await detailsResponse.json();
 
+const isMovie =
+  type === 'movie';
+
+const dateStr =
+  isMovie
+    ? raw.release_date
+    : raw.first_air_date;
+
 
 // =====================================================
 // КОЛЛЕКЦИЯ / СВЯЗАННЫЕ ФИЛЬМЫ
@@ -595,13 +603,7 @@ const recommendations =
         ? await providersResponse.json()
         : {};
 
-    const isMovie =
-      type === 'movie';
 
-    const dateStr =
-      isMovie
-        ? raw.release_date
-        : raw.first_air_date;
 
 
     // =====================================================
@@ -699,117 +701,7 @@ const recommendations =
     // =====================================================
     // ПОХОЖИЕ
     // =====================================================
-// =====================================================
-// СВЯЗАННЫЕ ФИЛЬМЫ
-// =====================================================
 
-const renderRelated =
-  () => {
-
-    if (
-      !Array.isArray(
-        item.related
-      ) ||
-      !item.related.length
-    ) {
-      return '';
-    }
-
-    return `
-      <section
-        class="rich-modal__section"
-      >
-
-        <h3>
-          Связанные фильмы
-        </h3>
-
-        <div
-          class="rich-modal__similar"
-        >
-
-          ${item.related
-            .map(
-              related => `
-
-                <div
-                  class="rich-modal__similar-card"
-                  data-similar-id="${escapeHtml(
-                    String(
-                      related.id
-                    )
-                  )}"
-                  data-similar-provider="${escapeHtml(
-                    String(
-                      related.provider ||
-                      ''
-                    )
-                  )}"
-                  tabindex="0"
-                  role="button"
-                  aria-label="Открыть ${escapeHtml(
-                    related.title
-                  )}"
-                >
-
-                  ${
-                    related.poster
-                      ? `
-                        <img
-                          src="${related.poster}"
-                          alt="${escapeHtml(
-                            related.title
-                          )}"
-                          loading="lazy"
-                        >
-                      `
-                      : `
-                        <div
-                          class="rich-modal__similar-placeholder"
-                        >
-                          ${escapeHtml(
-                            (
-                              related.title ||
-                              '?'
-                            )[0]
-                          )}
-                        </div>
-                      `
-                  }
-
-                  <strong>
-                    ${escapeHtml(
-                      related.title
-                    )}
-                  </strong>
-
-                  <span>
-                    ${escapeHtml(
-                      [
-                        related.year,
-                        related.rating
-                          ? `★ ${related.rating}`
-                          : ''
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')
-                    )}
-                  </span>
-
-                </div>
-
-              `
-            )
-            .join('')}
-
-        </div>
-
-      </section>
-    `;
-  };
-    // =====================================================
-// РЕКОМЕНДАЦИИ
-// =====================================================
 
 const sourceYear =
   dateStr
