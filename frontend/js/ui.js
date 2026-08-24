@@ -709,38 +709,7 @@ const reyohohoUrl =
       }
 
       return `
-        <section class="rich-modal__section">
-          <h3>Где посмотреть</h3>
 
-          <div class="rich-modal__providers">
-            ${item.watchProviders
-              .map(
-                provider => `
-                  <div class="rich-modal__provider">
-
-                    ${
-                      provider.logo
-                        ? `
-                          <img
-                            src="${provider.logo}"
-                            alt=""
-                          >
-                        `
-                        : ''
-                    }
-
-                    <span>
-                      ${escapeHtml(
-                        provider.name
-                      )}
-                    </span>
-
-                  </div>
-                `
-              )
-              .join('')}
-          </div>
-        </section>
       `;
     };
 
@@ -1160,7 +1129,7 @@ const renderSimilar =
       ${renderCast()}
 
 
-      ${renderProviders()}
+
 
 
       <section class="rich-modal__section rich-modal__library">
@@ -1248,27 +1217,33 @@ const renderSimilar =
                   const value =
                     index + 1;
 
-                  const checked =
-                    Number(
-                      record?.userRating
-                    ) === value;
+                const selectedRating =
+                  Number(
+                    record?.userRating
+                  );
 
-                  return `
-                    <button
-                      type="button"
-                      class="star-rating__star${
-                        checked
-                          ? ' is-active'
-                          : ''
-                      }"
-                      data-rating="${value}"
-                      role="radio"
-                      aria-checked="${checked}"
-                      aria-label="${value} из 10"
-                    >
-                      ★
-                    </button>
-                  `;
+                const active =
+                  selectedRating >= value;
+
+                const checked =
+                  selectedRating === value;
+
+                return `
+                  <button
+                    type="button"
+                    class="star-rating__star${
+                      active
+                        ? ' is-active'
+                        : ''
+                    }"
+                    data-rating="${value}"
+                    role="radio"
+                    aria-checked="${checked}"
+                    aria-label="${value} из 10"
+                  >
+                    ★
+                  </button>
+                `;
                 }
               ).join('')}
 
