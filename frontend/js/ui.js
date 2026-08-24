@@ -728,47 +728,105 @@ export function openModal(
     };
 
 
-  const renderSimilar =
-    () => {
-      if (
-        !Array.isArray(
-          item.similar
-        ) ||
-        !item.similar.length
-      ) {
-        return '';
-      }
+const renderSimilar =
+  () => {
 
-      return `
-        <section class="rich-modal__section">
-          <h3>Похожие</h3>
+    if (
+      !Array.isArray(
+        item.similar
+      ) ||
+      !item.similar.length
+    ) {
+      return '';
+    }
 
-          <div class="rich-modal__similar">
-            ${item.similar
-              .map(
-                similar => `
-                 <div
-  class="rich-modal__similar-card"
-  data-similar-id="${escapeHtml(
-    String(similar.id)
-  )}"
-  data-similar-provider="${escapeHtml(
-    String(similar.provider || '')
-  )}"
-  tabindex="0"
-  role="button"
-  aria-label="Открыть ${escapeHtml(
-    similar.title
-  )}"
->
-                `
-              )
-              .join('')}
-          </div>
-        </section>
-      `;
-    };
+    return `
+      <section class="rich-modal__section">
 
+        <h3>
+          Похожие
+        </h3>
+
+        <div class="rich-modal__similar">
+
+          ${item.similar
+            .map(
+              similar => `
+
+                <div
+                  class="rich-modal__similar-card"
+                  data-similar-id="${escapeHtml(
+                    String(
+                      similar.id
+                    )
+                  )}"
+                  data-similar-provider="${escapeHtml(
+                    String(
+                      similar.provider || ''
+                    )
+                  )}"
+                  tabindex="0"
+                  role="button"
+                  aria-label="Открыть ${escapeHtml(
+                    similar.title
+                  )}"
+                >
+
+                  ${
+                    similar.poster
+                      ? `
+                        <img
+                          src="${similar.poster}"
+                          alt="${escapeHtml(
+                            similar.title
+                          )}"
+                          loading="lazy"
+                        >
+                      `
+                      : `
+                        <div
+                          class="rich-modal__similar-placeholder"
+                        >
+                          ${escapeHtml(
+                            (
+                              similar.title ||
+                              '?'
+                            )[0]
+                          )}
+                        </div>
+                      `
+                  }
+
+                  <strong>
+                    ${escapeHtml(
+                      similar.title
+                    )}
+                  </strong>
+
+                  <span>
+                    ${escapeHtml(
+                      [
+                        similar.year,
+                        similar.rating
+                          ? `★ ${similar.rating}`
+                          : ''
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
+                    )}
+                  </span>
+
+                </div>
+
+              `
+            )
+            .join('')}
+
+        </div>
+
+      </section>
+    `;
+  };
 
   // =====================================================
   // HERO
