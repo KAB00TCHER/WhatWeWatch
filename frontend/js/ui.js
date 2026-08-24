@@ -494,52 +494,31 @@ const reyohohoUrl =
 
 
   const renderRating =
-    (
-      value,
-      label,
-      className = ''
-    ) => {
-      if (
-        value === null ||
-        value === undefined ||
-        value === ''
-      ) {
-        return '';
-      }
+  (
+    value,
+    label,
+    className = ''
+  ) => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
+      return '';
+    }
 
-      return `
-        <div class="rich-modal__rating ${className}">
-          <strong>
-            ★ ${escapeHtml(value)}
-          </strong>
+    return `
+      <div class="rich-modal__rating ${className}">
+        <strong>
+          ★ ${escapeHtml(value)}
+        </strong>
 
-          <span>
-            ${label}
-          </span>
-        </div>
-         ${
-        item.type === 'movie' ||
-        item.type === 'series' ||
-        item.type === 'anime'
-          ? `
-            <section class="rich-modal__section rich-modal__watch">
-
-              <a
-                class="button button--primary rich-modal__watch-button"
-                href="${reyohohoUrl}"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                 Смотреть ▶
-              </a>
-
-            </section>
-          `
-          : ''
-      }
-      `;
-    };
-
+        <span>
+          ${label}
+        </span>
+      </div>
+    `;
+  };
 
   const renderFacts =
     () => {
@@ -1123,6 +1102,22 @@ const renderSimilar =
             )}
 
           </div>
+          ${
+  item.type === 'movie' ||
+  item.type === 'series' ||
+  item.type === 'anime'
+    ? `
+      <a
+        class="button button--primary rich-modal__watch-button"
+        href="${reyohohoUrl}"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Смотреть ➤
+      </a>
+    `
+    : ''
+}
 
 
           ${renderGenres()}
@@ -1136,7 +1131,6 @@ const renderSimilar =
 
     <div class="rich-modal__body">
 
-     
 
 
       ${

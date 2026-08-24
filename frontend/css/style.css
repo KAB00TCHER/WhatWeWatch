@@ -2526,3 +2526,16 @@ img {
   border-radius: 3px;
 }
 
+.rich-modal__watch-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 36px;
+  padding: 7px 14px;
+  margin: 10px 0 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
