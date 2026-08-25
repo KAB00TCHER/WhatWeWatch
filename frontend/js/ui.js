@@ -160,6 +160,7 @@ export function openRandomChoice(
   item,
   { onOpen, onAgain } = {}
 ) {
+  modalEl.classList.add('modal--recommendation');
   modalEl.innerHTML = `
     <button
       class="modal__close"
@@ -231,10 +232,11 @@ export function openRandomChoice(
     </div>
   `;
 
-  const close = () => {
-    overlayEl.hidden = true;
-    modalEl.innerHTML = '';
-  };
+const close = () => {
+  overlayEl.hidden = true;
+  modalEl.innerHTML = '';
+  modalEl.classList.remove('modal--recommendation');
+};
 
   modalEl
     .querySelector('[data-action="close"]')
@@ -415,6 +417,9 @@ export function openModal(
     onOpenItem,
   }
 ) {
+
+    modalEl.classList.remove('modal--recommendation');
+
   const inLibrary =
     Boolean(record);
 

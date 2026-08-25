@@ -3096,3 +3096,265 @@ img {
     width: 100%;
   }
 }
+
+
+/* =========================================================
+   RECOMMENDATION MODAL
+========================================================= */
+
+.modal.modal--recommendation {
+  width: min(680px, calc(100vw - 32px));
+  max-width: 680px;
+
+  max-height: none;
+  overflow: visible;
+
+  padding: 0;
+
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+
+/* =========================================================
+   RECOMMENDATION CARD
+========================================================= */
+
+.recommendation-card {
+  position: relative;
+
+  display: grid;
+
+  grid-template-columns: 170px minmax(0, 1fr);
+
+  gap: 24px;
+
+  width: 100%;
+
+  padding: 24px;
+
+  border:
+    1px solid
+    var(--color-border);
+
+  border-radius: var(--radius-lg);
+
+  background:
+    linear-gradient(
+      145deg,
+      var(--color-surface-2),
+      var(--color-surface)
+    );
+
+  box-shadow:
+    0 24px 70px
+    rgba(0, 0, 0, .5);
+}
+
+
+/* Poster */
+
+.recommendation-card .random-choice__poster {
+  width: 170px;
+  height: 255px;
+
+  object-fit: cover;
+
+  border-radius: 12px;
+
+  background:
+    var(--color-surface-2);
+
+  box-shadow:
+    0 14px 35px
+    rgba(0, 0, 0, .35);
+}
+
+.recommendation-card
+.random-choice__poster--placeholder {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  color:
+    var(--color-text-muted);
+
+  font-family:
+    var(--font-display);
+
+  font-size: 3rem;
+}
+
+
+/* Text */
+
+.recommendation-card
+.random-choice__eyebrow {
+  grid-column: 2;
+
+  margin: 4px 0 4px;
+
+  color:
+    var(--color-accent);
+
+  font-size: .72rem;
+  font-weight: 700;
+
+  letter-spacing: .08em;
+
+  text-transform: uppercase;
+}
+
+.recommendation-card
+.card__type {
+  grid-column: 2;
+
+  align-self: end;
+
+  margin: 0;
+}
+
+.recommendation-card h2 {
+  grid-column: 2;
+
+  margin: 4px 0 0;
+
+  font-family:
+    var(--font-display);
+
+  font-size: 2rem;
+
+  line-height: 1.05;
+
+  overflow-wrap: anywhere;
+}
+
+.recommendation-card
+.random-choice__meta {
+  grid-column: 2;
+
+  margin: 8px 0 0;
+
+  color:
+    var(--color-text-muted);
+
+  font-size: .82rem;
+}
+
+
+/* Buttons */
+
+.recommendation-card
+.random-choice__actions {
+  grid-column: 2;
+
+  display: flex;
+
+  gap: 8px;
+
+  margin-top: 12px;
+}
+
+.recommendation-card
+.random-choice__actions .button {
+  flex: 1;
+}
+
+
+/* Close */
+
+.modal--recommendation
+.modal__close {
+  z-index: 5;
+
+  top: 10px;
+  right: 10px;
+
+  background:
+    rgba(20, 24, 31, .75);
+}
+
+
+/* =========================================================
+   RECOMMENDATION — MOBILE
+========================================================= */
+
+@media (max-width: 640px) {
+
+  .modal.modal--recommendation {
+    width:
+      min(
+        420px,
+        calc(100vw - 24px)
+      );
+  }
+
+  .recommendation-card {
+    grid-template-columns:
+      120px
+      minmax(0, 1fr);
+
+    gap: 16px;
+
+    padding: 20px;
+  }
+
+  .recommendation-card
+  .random-choice__poster {
+    width: 120px;
+    height: 180px;
+  }
+
+  .recommendation-card h2 {
+    font-size: 1.55rem;
+  }
+
+  .recommendation-card
+  .random-choice__actions {
+    grid-column: 1 / -1;
+  }
+}
+
+
+@media (max-width: 420px) {
+
+  .modal.modal--recommendation {
+    width:
+      calc(100vw - 24px);
+  }
+
+  .recommendation-card {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    padding: 20px;
+
+    text-align: center;
+  }
+
+  .recommendation-card
+  .random-choice__poster {
+    width: 150px;
+    height: 225px;
+  }
+
+  .recommendation-card
+  .random-choice__eyebrow,
+  .recommendation-card
+  .card__type,
+  .recommendation-card h2,
+  .recommendation-card
+  .random-choice__meta {
+    width: 100%;
+  }
+
+  .recommendation-card
+  .random-choice__actions {
+    width: 100%;
+  }
+}
