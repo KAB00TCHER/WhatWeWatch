@@ -170,7 +170,7 @@ export function openRandomChoice(
       &times;
     </button>
 
-    <div class="random-choice">
+    <div class="recommendation-card">
 
       <p class="random-choice__eyebrow">
         А что если посмотреть это?
@@ -1407,7 +1407,70 @@ const similarItem =
 
   });
 
+const showToast = (
+  message,
+  title = 'Готово'
+) => {
 
+  document
+    .querySelector('.app-toast')
+    ?.remove();
+
+  const toast =
+    document.createElement('div');
+
+  toast.className =
+    'app-toast';
+
+  toast.setAttribute(
+    'role',
+    'status'
+  );
+
+  toast.innerHTML = `
+    <span
+      class="app-toast__mark"
+      aria-hidden="true"
+    >
+      ✓
+    </span>
+
+    <span class="app-toast__content">
+
+      <strong>
+        ${escapeHtml(title)}
+      </strong>
+
+      <span>
+        ${escapeHtml(message)}
+      </span>
+
+    </span>
+  `;
+
+  document.body.appendChild(
+    toast
+  );
+
+  requestAnimationFrame(() => {
+    toast.classList.add(
+      'is-visible'
+    );
+  });
+
+  setTimeout(() => {
+
+    toast.classList.remove(
+      'is-visible'
+    );
+
+    setTimeout(
+      () => toast.remove(),
+      220
+    );
+
+  }, 2600);
+};
 
   // =====================================================
   // CLOSE
@@ -1511,65 +1574,148 @@ const similarItem =
     }
   );
 
-
+let isSubmitting = false;
   // =====================================================
   // SAVE
   // =====================================================
 
   modalEl
-    .querySelector(
-      '#modal-form'
-    )
-    .addEventListener(
-      'submit',
-      async event => {
+  .querySelector(
+    '#modal-form'
+  )
+  .addEventListener(
+    'submit',
+    async event => {
 
-        event.preventDefault();
+      event.preventDefault();
 
-        const formData =
-          new FormData(
-            event.currentTarget
-          );
+      if (isSubmitting) {
+        return;
+      }
 
+      isSubmitting = true;
 
-        const changes = {
-          status:
-            formData.get(
-              'status'
-            ),
+      const form = event.currentTarget;
 
-          userRating:
-            formData.get(
-              'userRating'
-            )
-              ? Number(
-                  formData.get(
-                    'userRating'
-                  )
+      const submitButton =
+        form.querySelector(
+          'button[type="submit"]'
+        );
+
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.dataset.originalText =
+          submitButton.textContent;
+
+        if (!inLibrary) {
+          submitButton.textContent =
+            'Добавляем…';
+        } else {
+          submitButton.textContent =
+            'Сохраняем…';
+        }
+      }
+
+      const formData =
+        new FormData(form);
+
+      const changes = {
+        status:
+          formData.get(
+            'status'
+          ),
+
+        userRating:
+          formData.get(
+            'userRating'
+          )
+            ? Number(
+                formData.get(
+                  'userRating'
                 )
-              : null,
+              )
+            : null,
 
-          note:
-            String(
-              formData.get(
-                'note'
-              ) || ''
-            ).trim(),
-        };
+        note:
+          String(
+            formData.get(
+              'note'
+            ) || ''
+          ).trim(),
+      };
 
+      try {
 
         if (inLibrary) {
+
           await onSave(
             changes
           );
-        } else {
+
+          isSubmitting = false;
+
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent =
+              submitButton.dataset.originalText ||
+              'Сохранить';
+          }
+
+          return;
+        }
+
+        const success =
           await onAdd(
             changes
           );
+
+        if (!success) {
+          isSubmitting = false;
+
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent =
+              submitButton.dataset.originalText ||
+              'Добавить в библиотеку';
+          }
+
+          return;
         }
 
+        const title =
+          item.title ||
+          'Контент';
+
+        close();
+
+        showToast(
+          `${title} добавлен в библиотеку`,
+          'Контент добавлен'
+        );
+
+      } catch (error) {
+
+        console.error(
+          '[modal] submit failed:',
+          error
+        );
+
+        isSubmitting = false;
+
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent =
+            submitButton.dataset.originalText ||
+            (
+              inLibrary
+                ? 'Сохранить'
+                : 'Добавить в библиотеку'
+            );
+        }
       }
-    );
+
+    }
+  );
 
 
   // =====================================================

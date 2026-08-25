@@ -865,38 +865,42 @@ ui.openModal(
       // ADD
       // -------------------------------------
 
-      onAdd: async (changes) => {
+        onAdd: async (changes) => {
 
-        try {
+          try {
 
-          if (record) {
-            await storage.updateLibraryRecord(
-              fullItem.id,
-              fullItem.provider,
-              changes
+            if (record) {
+              await storage.updateLibraryRecord(
+                fullItem.id,
+                fullItem.provider,
+                changes
+              );
+            } else {
+              await storage.addToLibrary(
+                fullItem,
+                changes
+              );
+            }
+
+            await render();
+
+            return true;
+
+          } catch (error) {
+
+            console.error(
+              '[library] failed to save item:',
+              error
             );
-          } else {
-            await storage.addToLibrary(
-              fullItem,
-              changes
+
+            alert(
+              error.message ||
+              'Не удалось сохранить изменения.'
             );
+
+            return false;
           }
-
-          await render();
-
-        } catch (error) {
-
-          console.error(
-            '[library] failed to save item:',
-            error
-          );
-
-          alert(
-            error.message ||
-            'Не удалось сохранить изменения.'
-          );
-        }
-      },
+        },
 
 
       // -------------------------------------
