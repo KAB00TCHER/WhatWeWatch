@@ -526,9 +526,14 @@ function renderLibraryPagination(totalPages) {
     button.className =
       'library-pagination__button';
 
-    if (active) {
-      button.classList.add('is-active');
-    }
+if (active) {
+  button.classList.add('is-active');
+
+  button.setAttribute(
+    'aria-current',
+    'page'
+  );
+}
 
     button.disabled = disabled;
     button.textContent = label;
