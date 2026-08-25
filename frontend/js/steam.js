@@ -334,6 +334,11 @@ export async function searchSteam(
       data?.items || [];
 
 
+      console.log(
+  '[steam] raw results:',
+  games
+);
+
     return games
       .filter(game =>
         isRelevant(

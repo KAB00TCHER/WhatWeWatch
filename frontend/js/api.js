@@ -244,6 +244,78 @@ function removeAnimeDuplicates(
 }
 
 
+function normalizeGameTitle(title) {
+  return String(title || '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(
+      /[^\p{L}\p{N}\s]+/gu,
+      ' '
+    )
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+
+function gameTitleMatches(
+  title,
+  query
+) {
+  const a =
+    normalizeGameTitle(title);
+
+  const b =
+    normalizeGameTitle(query);
+
+
+  if (!a || !b) {
+    return false;
+  }
+
+
+  // Полное совпадение
+  if (a === b) {
+    return true;
+  }
+
+
+  // Название содержит запрос целиком
+  if (a.includes(b)) {
+    return true;
+  }
+
+
+  const queryWords =
+    b.split(' ')
+      .filter(Boolean);
+
+
+  const titleWords =
+    new Set(
+      a.split(' ')
+        .filter(Boolean)
+    );
+
+
+  if (!queryWords.length) {
+    return false;
+  }
+
+
+  const matched =
+    queryWords.filter(
+      word =>
+        titleWords.has(word)
+    ).length;
+
+
+  return (
+    matched /
+      queryWords.length >=
+    0.8
+  );
+}
+
 
 async function searchGames(
   query
@@ -252,22 +324,43 @@ async function searchGames(
     await searchRAWG(query);
 
 
-  // RAWG нашёл игру.
-  // Steam не трогаем.
+  // Проверяем не просто наличие RAWG
+  // результатов, а наличие действительно
+  // подходящей игры.
+  const relevantRAWG =
+    rawgResults.filter(
+      item =>
+        gameTitleMatches(
+          item.title,
+          query
+        ) ||
+        gameTitleMatches(
+          item.originalTitle,
+          query
+        )
+    );
+
+
   if (
-    rawgResults.length
+    relevantRAWG.length
   ) {
-    return rawgResults;
+    return relevantRAWG;
   }
 
 
-  // RAWG ничего не нашёл.
-  // Используем Steam.
+  // RAWG вернул только похожие игры
+  // или вообще ничего не нашёл.
+  // Передаём поиск Steam.
+  console.log(
+    '[games] RAWG has no relevant match, trying Steam:',
+    query
+  );
+
+
   return searchSteam(
     query
   );
 }
-
 
 
 export async function searchAll(
