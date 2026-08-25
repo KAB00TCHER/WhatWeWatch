@@ -199,11 +199,11 @@ function mapSearchGame(
     rating:
       null,
 
-    poster:
-      `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x900_2x.jpg`,
+   poster:
+  `/api/steam?image=${appId}/library_600x900_2x.jpg`,
 
-    backdrop:
-      `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_hero.jpg`,
+backdrop:
+  `/api/steam?image=${appId}/library_hero.jpg`,
 
 
     description:
@@ -268,11 +268,11 @@ function mapDetails(
     rating:
       null,
 
-   poster:
-  `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x900_2x.jpg`,
+  poster:
+  `/api/steam?image=${appId}/library_600x900_2x.jpg`,
 
 backdrop:
-  `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_hero.jpg`,
+  `/api/steam?image=${appId}/library_hero.jpg`,
 
     description:
       raw.short_description ||

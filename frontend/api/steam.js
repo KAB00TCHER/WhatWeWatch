@@ -1,6 +1,9 @@
 const STEAM_STORE_URL =
   'https://store.steampowered.com';
 
+const STEAM_CDN =
+  'https://cdn.cloudflare.steamstatic.com/steam/apps';
+
 const STEAM_TIMEOUT_MS = 5000;
 
 
@@ -14,9 +17,11 @@ async function fetchSteam(url) {
       STEAM_TIMEOUT_MS
     );
 
+
   try {
     return await fetch(url, {
-      signal: controller.signal,
+      signal:
+        controller.signal,
 
       headers: {
         'User-Agent':
@@ -35,27 +40,90 @@ export default async function handler(
   res
 ) {
   try {
-    const { q, id } =
-      req.query;
+
+    /*
+     * Steam image proxy
+     */
+    if (req.query.image) {
+
+      const imageUrl =
+        `${STEAM_CDN}/${req.query.image}`;
+
+
+      const response =
+        await fetch(imageUrl);
+
+
+      if (!response.ok) {
+        return res
+          .status(
+            response.status
+          )
+          .end();
+      }
+
+
+      const contentType =
+        response.headers.get(
+          'content-type'
+        ) ||
+        'image/jpeg';
+
+
+      const buffer =
+        Buffer.from(
+          await response.arrayBuffer()
+        );
+
+
+      res.setHeader(
+        'Content-Type',
+        contentType
+      );
+
+
+      res.setHeader(
+        'Cache-Control',
+        'public, max-age=86400'
+      );
+
+
+      return res
+        .status(200)
+        .send(buffer);
+    }
+
+
+    const {
+      q,
+      id
+    } = req.query;
+
 
     let url;
 
 
-    // Получение подробностей игры
+    /*
+     * Получение подробностей игры
+     */
     if (id) {
+
       url = new URL(
         `${STEAM_STORE_URL}/api/appdetails`
       );
+
 
       url.searchParams.set(
         'appids',
         id
       );
 
+
       url.searchParams.set(
         'l',
         'russian'
       );
+
 
       url.searchParams.set(
         'cc',
@@ -63,33 +131,40 @@ export default async function handler(
       );
 
 
-    // Поиск игр
+    /*
+     * Поиск игр
+     */
     } else if (q) {
+
       url = new URL(
         `${STEAM_STORE_URL}/api/storesearch`
       );
+
 
       url.searchParams.set(
         'term',
         q
       );
 
+
       url.searchParams.set(
         'l',
         'russian'
       );
+
 
       url.searchParams.set(
         'cc',
         'ru'
       );
 
+
       url.searchParams.set(
         'count',
         '20'
       );
 
-      // Только игры
+
       url.searchParams.set(
         'category1',
         '998'
@@ -97,6 +172,7 @@ export default async function handler(
 
 
     } else {
+
       return res.status(400).json({
         error:
           'Missing q or id',
@@ -109,12 +185,15 @@ export default async function handler(
 
 
     if (!response.ok) {
-      return res.status(
-        response.status
-      ).json({
-        error:
-          `Steam ${response.status}`,
-      });
+
+      return res
+        .status(
+          response.status
+        )
+        .json({
+          error:
+            `Steam ${response.status}`,
+        });
     }
 
 
@@ -122,9 +201,9 @@ export default async function handler(
       await response.json();
 
 
-    return res.status(200).json(
-      data
-    );
+    return res
+      .status(200)
+      .json(data);
 
 
   } catch (error) {
@@ -133,14 +212,18 @@ export default async function handler(
       error?.name ===
       'AbortError'
     ) {
+
       console.warn(
         '[steam] request timed out'
       );
 
-      return res.status(504).json({
-        error:
-          'Steam request timed out',
-      });
+
+      return res
+        .status(504)
+        .json({
+          error:
+            'Steam request timed out',
+        });
     }
 
 
@@ -150,9 +233,11 @@ export default async function handler(
     );
 
 
-    return res.status(502).json({
-      error:
-        'Steam unavailable',
-    });
+    return res
+      .status(502)
+      .json({
+        error:
+          'Steam unavailable',
+      });
   }
 }
