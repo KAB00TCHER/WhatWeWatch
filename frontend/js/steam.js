@@ -41,7 +41,7 @@ function isRelevant(
   }
 
 
-  // Название содержит весь запрос
+  // Название содержит запрос целиком
   if (
     normalizedTitle.includes(
       normalizedQuery
@@ -69,16 +69,37 @@ function isRelevant(
   }
 
 
-  const matches =
-    queryWords.filter(word =>
-      titleWords.has(word)
+  const matched =
+    queryWords.filter(
+      word =>
+        titleWords.has(word)
     ).length;
 
 
+  // Одно слово:
+  // достаточно наличия этого слова
+  if (
+    queryWords.length === 1
+  ) {
+    return matched === 1;
+  }
+
+
+  // Два слова:
+  // оба должны совпадать
+  if (
+    queryWords.length === 2
+  ) {
+    return matched === 2;
+  }
+
+
+  // Три и более слов:
+  // достаточно 60% совпадения
   return (
-    matches /
+    matched /
       queryWords.length >=
-    0.8
+    0.6
   );
 }
 
@@ -179,11 +200,11 @@ function mapSearchGame(
       null,
 
     poster:
-      game.tiny_image ||
-      null,
+      `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x900_2x.jpg`,
 
     backdrop:
-      null,
+      `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_hero.jpg`,
+
 
     description:
       '',
@@ -247,15 +268,11 @@ function mapDetails(
     rating:
       null,
 
-    poster:
-      raw.header_image ||
-      raw.capsule_image ||
-      null,
+   poster:
+  `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x900_2x.jpg`,
 
-    backdrop:
-      raw.background ||
-      raw.header_image ||
-      null,
+backdrop:
+  `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_hero.jpg`,
 
     description:
       raw.short_description ||
@@ -334,22 +351,33 @@ export async function searchSteam(
       data?.items || [];
 
 
-      console.log(
-  '[steam] raw results:',
-  games
-);
+    console.log(
+      '[steam] raw results:',
+      games
+    );
 
-    return games
-      .filter(game =>
-        isRelevant(
-          game.name,
-          text
+
+    const relevant =
+      games
+        .filter(game =>
+          isRelevant(
+            game.name,
+            text
+          )
         )
-      )
-      .map(
-        mapSearchGame
-      )
-      .filter(Boolean);
+        .map(
+          mapSearchGame
+        )
+        .filter(Boolean);
+
+
+    console.log(
+      '[steam] relevant results:',
+      relevant
+    );
+
+
+    return relevant;
 
 
   } catch (error) {
