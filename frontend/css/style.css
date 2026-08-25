@@ -85,16 +85,7 @@ img {
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--color-border);
 }
-
-.app-header__brand {
-  font-family: var(--font-display);
-  font-size: 2rem;
-  letter-spacing: 0.05em;
-  color: var(--color-accent);
-  white-space: nowrap;
-}
-
-/* ---- Brand mark ---- */
+/* ---- Header brand ---- */
 
 .app-header__brand {
   position: relative;
@@ -102,13 +93,25 @@ img {
   display: inline-flex;
   align-items: center;
 
-  padding-left: 42px;
+  min-height: 32px;
+  padding: 0 0 0 44px;
 
   background: transparent;
   border: none;
 
+  font-family: 'Arial Black', 'Arial Narrow', Arial, sans-serif;
+  font-size: 1.55rem;
+  font-weight: 900;
+  line-height: 1;
+
+  letter-spacing: 0.05em;
+  color: var(--color-accent);
+  white-space: nowrap;
+
   cursor: pointer;
 }
+
+/* TV / screen mark */
 
 .app-header__brand::before {
   content: '';
@@ -117,8 +120,8 @@ img {
   left: 0;
   top: 50%;
 
-  width: 28px;
-  height: 22px;
+  width: 30px;
+  height: 23px;
 
   transform: translateY(-50%);
 
@@ -129,6 +132,8 @@ img {
     inset 0 -4px 0 rgba(226, 163, 61, 0.08);
 }
 
+/* Play symbol */
+
 .app-header__brand::after {
   content: '';
 
@@ -136,12 +141,10 @@ img {
   left: 11px;
   top: 50%;
 
-  transform:
-    translateY(-50%)
-    translateX(1px);
-
   width: 0;
   height: 0;
+
+  transform: translateY(-50%);
 
   border-top: 6px solid transparent;
   border-bottom: 6px solid transparent;
