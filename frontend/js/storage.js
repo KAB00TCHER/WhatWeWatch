@@ -1,25 +1,27 @@
 // js/storage.js
 //
 // User library -> Supabase
-// Media cache -> localStorage
+// Media cache  -> localStorage
 //
-// Все остальные файлы проекта работают со storage.js
-// и не обращаются напрямую ни к Supabase, ни к localStorage.
-
+// Остальной проект работает с библиотекой
+// только через этот файл.
 
 import {
   supabaseRequest,
   getCurrentUser,
 } from './supabase.js';
 
-import { enrichDetails } from './api.js';
+import {
+  enrichDetails,
+} from './api.js';
+
+
 // =========================================================
 // CONSTANTS
 // =========================================================
 
 const CACHE_KEY =
   'whatwewatch:mediaCache';
-
 
 export const STATUS = {
   PLANNED: 'planned',
@@ -31,22 +33,14 @@ export const STATUS = {
 
 
 // =========================================================
-// LOCAL MEDIA CACHE
+// LOCAL STORAGE
 // =========================================================
-//
-// Кэш остаётся локальным.
-// Он НЕ является пользовательской библиотекой.
-//
-// Например:
-// "tmdb:550" -> информация о Fight Club
-//
-// Это нормально хранить в localStorage,
-// потому что эти данные одинаковы для всех пользователей.
 
-
-function readJSON(key, fallback) {
+function readJSON(
+  key,
+  fallback
+) {
   try {
-
     const raw =
       localStorage.getItem(key);
 
@@ -54,11 +48,10 @@ function readJSON(key, fallback) {
       ? JSON.parse(raw)
       : fallback;
 
-  } catch (err) {
-
+  } catch (error) {
     console.warn(
-      `[storage] failed to read ${key}`,
-      err
+      `[storage] failed to read ${key}:`,
+      error
     );
 
     return fallback;
@@ -66,29 +59,22 @@ function readJSON(key, fallback) {
 }
 
 
-function writeJSON(key, value) {
+function writeJSON(
+  key,
+  value
+) {
   try {
-
     localStorage.setItem(
       key,
       JSON.stringify(value)
     );
 
-  } catch (err) {
-
+  } catch (error) {
     console.warn(
-      `[storage] failed to write ${key}`,
-      err
+      `[storage] failed to write ${key}:`,
+      error
     );
   }
-}
-
-
-function recordKey(
-  mediaId,
-  provider
-) {
-  return `${provider}:${mediaId}`;
 }
 
 
@@ -96,7 +82,23 @@ function recordKey(
 // MEDIA CACHE
 // =========================================================
 
-export function cacheMediaItem(item) {
+function makeCacheKey(
+  mediaId,
+  provider
+) {
+  return `${provider}:${mediaId}`;
+}
+
+
+export function cacheMediaItem(
+  item
+) {
+  if (
+    !item?.id ||
+    !item?.provider
+  ) {
+    return;
+  }
 
   const cache =
     readJSON(
@@ -104,14 +106,12 @@ export function cacheMediaItem(item) {
       {}
     );
 
-
   cache[
-    recordKey(
+    makeCacheKey(
       item.id,
       item.provider
     )
   ] = item;
-
 
   writeJSON(
     CACHE_KEY,
@@ -124,17 +124,15 @@ export function getCachedMediaItem(
   mediaId,
   provider
 ) {
-
   const cache =
     readJSON(
       CACHE_KEY,
       {}
     );
 
-
   return (
     cache[
-      recordKey(
+      makeCacheKey(
         mediaId,
         provider
       )
@@ -144,49 +142,30 @@ export function getCachedMediaItem(
 
 
 // =========================================================
-// CURRENT USER
+// USER
 // =========================================================
 
 async function requireUser() {
-
   const user =
     await getCurrentUser();
 
-
   if (!user) {
-
     throw new Error(
       'Для работы с библиотекой необходимо войти в аккаунт.'
     );
   }
-
 
   return user;
 }
 
 
 // =========================================================
-// DATABASE RECORD -> APP RECORD
+// DATABASE RECORD NORMALIZATION
 // =========================================================
-//
-// Supabase:
-//   media_id
-//   user_rating
-//   added_at
-//   updated_at
-//
-// Application:
-//   mediaId
-//   userRating
-//   addedAt
-//   updatedAt
-//
-// Остальному коду проекта не нужно знать,
-// как именно называются поля в БД.
 
-
-function normalizeRecord(row) {
-
+function normalizeRecord(
+  row
+) {
   return {
     id: row.id,
 
@@ -215,64 +194,113 @@ function normalizeRecord(row) {
 
 
 // =========================================================
-// GET ALL LIBRARY RECORDS
+// DATABASE QUERY HELPERS
 // =========================================================
 
-export async function getLibraryRecords() {
+function libraryQuery(
+  userId,
+  {
+    mediaId,
+    provider,
+  } = {}
+) {
+  const params =
+    new URLSearchParams();
 
-  const user =
-    await requireUser();
+  params.set(
+    'user_id',
+    `eq.${userId}`
+  );
+
+  params.set(
+    'select',
+    '*'
+  );
+
+  if (mediaId !== undefined) {
+    params.set(
+      'media_id',
+      `eq.${String(mediaId)}`
+    );
+  }
+
+  if (provider !== undefined) {
+    params.set(
+      'provider',
+      `eq.${provider}`
+    );
+  }
+
+  return `library_items?${params}`;
+}
 
 
+async function findLibraryRecord(
+  userId,
+  mediaId,
+  provider
+) {
   const data =
     await supabaseRequest(
-      `library_items?user_id=eq.${encodeURIComponent(user.id)}&select=*`,
+      libraryQuery(
+        userId,
+        {
+          mediaId,
+          provider,
+        }
+      ),
       {
         method: 'GET',
       }
     );
 
-
-  return (data || [])
-    .map(normalizeRecord);
+  return data?.length
+    ? normalizeRecord(data[0])
+    : null;
 }
 
 
 // =========================================================
-// GET ONE LIBRARY RECORD
+// GET LIBRARY
 // =========================================================
+
+export async function getLibraryRecords() {
+  const user =
+    await requireUser();
+
+  const data =
+    await supabaseRequest(
+      libraryQuery(user.id),
+      {
+        method: 'GET',
+      }
+    );
+
+  return (
+    data || []
+  ).map(
+    normalizeRecord
+  );
+}
+
 
 export async function getLibraryRecord(
   mediaId,
   provider
 ) {
-
   const user =
     await requireUser();
 
-
-  const data =
-    await supabaseRequest(
-      `library_items?user_id=eq.${encodeURIComponent(user.id)}&media_id=eq.${encodeURIComponent(String(mediaId))}&provider=eq.${encodeURIComponent(provider)}&select=*`,
-      {
-        method: 'GET',
-      }
-    );
-
-
-  if (!data || !data.length) {
-    return null;
-  }
-
-
-  return normalizeRecord(
-    data[0]
+  return findLibraryRecord(
+    user.id,
+    mediaId,
+    provider
   );
 }
 
 
 // =========================================================
-// ADD TO LIBRARY
+// ADD
 // =========================================================
 
 export async function addToLibrary(
@@ -283,19 +311,23 @@ export async function addToLibrary(
     note = '',
   } = {}
 ) {
-
   const user =
     await requireUser();
 
+  if (
+    !mediaItem?.id ||
+    !mediaItem?.provider
+  ) {
+    throw new Error(
+      'Invalid media item.'
+    );
+  }
 
-  // Кэшируем информацию о фильме/игре/аниме
-  // локально, чтобы потом можно было
-  // отрисовать библиотеку без повторного API-запроса.
-  cacheMediaItem(mediaItem);
-
+  cacheMediaItem(
+    mediaItem
+  );
 
   const payload = {
-
     user_id:
       user.id,
 
@@ -313,7 +345,6 @@ export async function addToLibrary(
     note,
   };
 
-
   const data =
     await supabaseRequest(
       'library_items',
@@ -330,69 +361,59 @@ export async function addToLibrary(
       }
     );
 
-
-  if (!data || !data.length) {
-    return null;
-  }
-
-
-  return normalizeRecord(
-    data[0]
-  );
+  return data?.length
+    ? normalizeRecord(data[0])
+    : null;
 }
 
 
 // =========================================================
-// UPDATE LIBRARY RECORD
+// UPDATE
 // =========================================================
 
 export async function updateLibraryRecord(
   mediaId,
   provider,
-  changes
+  changes = {}
 ) {
-
   const user =
     await requireUser();
 
-
   const payload = {};
-
 
   if (
     changes.status !== undefined
   ) {
-
     payload.status =
       changes.status;
   }
 
-
   if (
     changes.userRating !== undefined
   ) {
-
     payload.user_rating =
       changes.userRating;
   }
 
-
   if (
     changes.note !== undefined
   ) {
-
     payload.note =
       changes.note;
   }
 
-
   payload.updated_at =
     new Date().toISOString();
 
-
   const data =
     await supabaseRequest(
-      `library_items?user_id=eq.${encodeURIComponent(user.id)}&media_id=eq.${encodeURIComponent(String(mediaId))}&provider=eq.${encodeURIComponent(provider)}`,
+      libraryQuery(
+        user.id,
+        {
+          mediaId,
+          provider,
+        }
+      ),
       {
         method: 'PATCH',
 
@@ -406,33 +427,31 @@ export async function updateLibraryRecord(
       }
     );
 
-
-  if (!data || !data.length) {
-    return null;
-  }
-
-
-  return normalizeRecord(
-    data[0]
-  );
+  return data?.length
+    ? normalizeRecord(data[0])
+    : null;
 }
 
 
 // =========================================================
-// REMOVE FROM LIBRARY
+// REMOVE
 // =========================================================
 
 export async function removeFromLibrary(
   mediaId,
   provider
 ) {
-
   const user =
     await requireUser();
 
-
   await supabaseRequest(
-    `library_items?user_id=eq.${encodeURIComponent(user.id)}&media_id=eq.${encodeURIComponent(String(mediaId))}&provider=eq.${encodeURIComponent(provider)}`,
+    libraryQuery(
+      user.id,
+      {
+        mediaId,
+        provider,
+      }
+    ),
     {
       method: 'DELETE',
     }
@@ -441,78 +460,81 @@ export async function removeFromLibrary(
 
 
 // =========================================================
-// COMBINED LIBRARY VIEW
+// MEDIA ID PARSING
 // =========================================================
-//
-// Берём:
-//   1. записи пользователя из Supabase
-//   2. информацию о медиа из localStorage
-//
-// И объединяем их.
-//
-// Если фильм есть в БД, но его медиа-данных
-// нет в локальном кэше, такая запись пока
-// не отображается.
 
-function parseMediaId(mediaId, provider) {
-  const value = String(mediaId);
+function parseMediaId(
+  mediaId,
+  provider
+) {
+  const value =
+    String(mediaId);
+
+  const patterns = {
+    tmdb:
+      /^tmdb-(movie|series|tv)-(.+)$/,
+
+    rawg:
+      /^rawg-game-(.+)$/,
+
+    shikimori:
+      /^shikimori-anime-(.+)$/,
+  };
+
+  const pattern =
+    patterns[provider];
+
+  if (!pattern) {
+    return null;
+  }
+
+  const match =
+    value.match(pattern);
+
+  if (!match) {
+    return null;
+  }
 
   if (provider === 'tmdb') {
-const match =
-  value.match(
-    /^tmdb-(movie|series|tv)-(.+)$/
-  );
-
-    if (!match) {
-      return null;
-    }
-
     return {
-      providerId: match[2],
+      providerId:
+        match[2],
 
-    type:
-  match[1] === 'tv' ||
-  match[1] === 'series'
-    ? 'series'
-    : 'movie',
+      type:
+        match[1] === 'tv' ||
+        match[1] === 'series'
+          ? 'series'
+          : 'movie',
     };
   }
 
   if (provider === 'rawg') {
-    const match =
-      value.match(
-        /^rawg-game-(.+)$/
-      );
-
-    if (!match) {
-      return null;
-    }
-
     return {
-      providerId: match[1],
-      type: 'game',
+      providerId:
+        match[1],
+
+      type:
+        'game',
     };
   }
 
   if (provider === 'shikimori') {
-    const match =
-      value.match(
-        /^shikimori-anime-(.+)$/
-      );
-
-    if (!match) {
-      return null;
-    }
-
     return {
-      providerId: match[1],
-      type: 'anime',
+      providerId:
+        match[1],
+
+      type:
+        'anime',
     };
   }
 
   return null;
 }
 
+
+// =========================================================
+// MEDIA RESTORATION
+// =========================================================
 
 async function restoreMediaItem(
   mediaId,
@@ -536,9 +558,14 @@ async function restoreMediaItem(
 
   const baseItem = {
     id: mediaId,
+
     provider,
-    providerId: parsed.providerId,
-    type: parsed.type,
+
+    providerId:
+      parsed.providerId,
+
+    type:
+      parsed.type,
 
     title: '',
     originalTitle: '',
@@ -550,7 +577,9 @@ async function restoreMediaItem(
     backdrop: null,
 
     description: '',
+
     genres: [],
+
     runtime: null,
     episodes: null,
     playtime: null,
@@ -563,8 +592,7 @@ async function restoreMediaItem(
       );
 
     if (
-      !restored ||
-      !restored.title
+      !restored?.title
     ) {
       console.warn(
         '[storage] failed to restore media:',
@@ -581,12 +609,12 @@ async function restoreMediaItem(
 
     return restored;
 
-  } catch (err) {
+  } catch (error) {
     console.warn(
       '[storage] media restore failed:',
       mediaId,
       provider,
-      err
+      error
     );
 
     return null;
@@ -594,93 +622,42 @@ async function restoreMediaItem(
 }
 
 
-export async function getLibraryWithDetails() {
-  const records =
-    await getLibraryRecords();
+// =========================================================
+// MEDIA RESOLUTION
+// =========================================================
 
-  const items =
-    await Promise.all(
-      records.map(async (record) => {
-
-        let media =
-  getCachedMediaItem(
-    record.mediaId,
-    record.provider
-  );
-
-if (
-  !media ||
-  !Array.isArray(media.genres) ||
-  media.genres.length === 0
+async function resolveMedia(
+  mediaId,
+  provider,
+  {
+    requireGenres = false,
+  } = {}
 ) {
-  media =
-    await restoreMediaItem(
-      record.mediaId,
-      record.provider
-    );
-}
-
-        if (!media) {
-          return null;
-        }
-
-        return {
-          ...media,
-          ...record,
-          id: media.id,
-        };
-      })
-    );
-
-  return items.filter(Boolean);
-}
-
-export async function getRandomLibraryCandidates() {
-  const records =
-    await getLibraryRecords();
-
-  return records.filter(
-    (record) =>
-      record.status === STATUS.PLANNED ||
-      record.status === STATUS.ON_HOLD
-  );
-}
-
-
-export async function getLibraryItemWithDetails(
-  record
-) {
-  if (!record) {
-    return null;
-  }
-
-  const mediaId =
-    String(record.mediaId || '');
-
-  const provider =
-    record.provider;
-
-  if (!mediaId || !provider) {
-    return null;
-  }
-
   let media =
     getCachedMediaItem(
       mediaId,
       provider
     );
 
-  // Кэш может быть старым или неполным.
-  // Для random нам обязательно нужны
-  // базовые поля карточки.
   const cacheIsValid =
     media &&
     media.id &&
     media.provider &&
     media.type &&
-    media.title;
+    media.title &&
+    (
+      !requireGenres ||
+      (
+        Array.isArray(
+          media.genres
+        ) &&
+        media.genres.length > 0
+      )
+    );
 
-  if (!cacheIsValid) {
+  if (
+    !cacheIsValid
+  ) {
     media = null;
   }
 
@@ -691,6 +668,103 @@ export async function getLibraryItemWithDetails(
         provider
       );
   }
+
+  return media;
+}
+
+
+// =========================================================
+// LIBRARY + MEDIA DETAILS
+// =========================================================
+
+export async function getLibraryWithDetails() {
+  const records =
+    await getLibraryRecords();
+
+  const items =
+    await Promise.all(
+      records.map(
+        async record => {
+          const media =
+            await resolveMedia(
+              record.mediaId,
+              record.provider,
+              {
+                requireGenres:
+                  true,
+              }
+            );
+
+          if (!media) {
+            return null;
+          }
+
+          return {
+            ...media,
+            ...record,
+
+            id:
+              media.id,
+          };
+        }
+      )
+    );
+
+  return items.filter(
+    Boolean
+  );
+}
+
+
+// =========================================================
+// RANDOM CANDIDATES
+// =========================================================
+
+export async function getRandomLibraryCandidates() {
+  const records =
+    await getLibraryRecords();
+
+  return records.filter(
+    record =>
+      record.status ===
+        STATUS.PLANNED ||
+      record.status ===
+        STATUS.ON_HOLD
+  );
+}
+
+
+// =========================================================
+// ONE LIBRARY ITEM + DETAILS
+// =========================================================
+
+export async function getLibraryItemWithDetails(
+  record
+) {
+  if (!record) {
+    return null;
+  }
+
+  const mediaId =
+    String(
+      record.mediaId || ''
+    );
+
+  const provider =
+    record.provider;
+
+  if (
+    !mediaId ||
+    !provider
+  ) {
+    return null;
+  }
+
+  const media =
+    await resolveMedia(
+      mediaId,
+      provider
+    );
 
   if (!media) {
     return null;

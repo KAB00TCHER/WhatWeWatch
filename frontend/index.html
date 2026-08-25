@@ -1,361 +1,496 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
   <title>WhatWeWatch</title>
+
   <link
-  rel="icon"
-  type="image/svg+xml"
-  href="favicon.svg"
-/>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css" />
+    rel="icon"
+    type="image/svg+xml"
+    href="favicon.svg"
+  >
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  >
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
 
-<header class="app-header">
-  <button
-  type="button"
-  class="app-header__brand"
-  id="home-button"
->
-  ЧТОСМОТРИМ
-</button>
+  <header class="app-header">
+    <button
+      type="button"
+      class="app-header__brand"
+      id="home-button"
+    >
+      ЧТОСМОТРИМ
+    </button>
 
-  <form class="search-bar" id="search-form">
-    <input
-      type="search"
-      id="search-input"
-      class="search-bar__input"
-      placeholder="Введите название…"
-      autocomplete="off"
-    />
+    <form
+      class="search-bar"
+      id="search-form"
+    >
+      <input
+        type="search"
+        id="search-input"
+        class="search-bar__input"
+        placeholder="Введите название…"
+        autocomplete="off"
+      >
+
+      <button
+        type="submit"
+        class="search-bar__button"
+      >
+        Поиск
+      </button>
+    </form>
 
     <button
-      type="submit"
-      class="search-bar__button"
+      type="button"
+      class="account-button"
+      id="account-button"
     >
-      Поиск
+      Войти
     </button>
-  </form>
+  </header>
 
-  <button
-    type="button"
-    class="account-button"
-    id="account-button"
+
+  <nav
+    class="type-filters"
+    id="type-filters"
+    aria-label="Тип контента"
   >
-    Войти
-  </button>
-</header>
+    <button
+      type="button"
+      class="type-filter"
+      data-type="movie"
+    >
+      <span class="type-dot type-dot--movie"></span>
+      Фильмы
+    </button>
 
+    <button
+      type="button"
+      class="type-filter"
+      data-type="series"
+    >
+      <span class="type-dot type-dot--series"></span>
+      Сериалы
+    </button>
 
-    
-<nav class="type-filters" id="type-filters">
-    
-  <button class="type-filter" data-type="movie">
-    <span class="type-dot type-dot--movie"></span>
-    Фильмы
-  </button>
+    <button
+      type="button"
+      class="type-filter"
+      data-type="anime"
+    >
+      <span class="type-dot type-dot--anime"></span>
+      Аниме
+    </button>
 
-  <button class="type-filter" data-type="series">
-    <span class="type-dot type-dot--series"></span>
-    Сериалы
-  </button>
-
-  <button class="type-filter" data-type="anime">
-    <span class="type-dot type-dot--anime"></span>
-    Аниме
-  </button>
-
-  <button class="type-filter" data-type="game">
-    <span class="type-dot type-dot--game"></span>
-    Игры
-  </button>
-
-</nav>
+    <button
+      type="button"
+      class="type-filter"
+      data-type="game"
+    >
+      <span class="type-dot type-dot--game"></span>
+      Игры
+    </button>
+  </nav>
 
 
   <main class="app-main">
 
-    <section class="results-section" id="results-section" hidden>
+    <section
+      class="results-section"
+      id="results-section"
+      hidden
+    >
       <div class="section-header">
         <h2>Результаты поиска</h2>
-        <button type="button" class="text-button" id="clear-search">Вернуться в библиотеку</button>
+
+        <button
+          type="button"
+          class="text-button"
+          id="clear-search"
+        >
+          Вернуться в библиотеку
+        </button>
       </div>
-      <div class="card-grid" id="results-grid"></div>
+
+      <div
+        class="card-grid"
+        id="results-grid"
+      ></div>
     </section>
 
-<section class="library-section" id="library-section">
 
-  <div class="library-toolbar">
+    <section
+      class="library-section"
+      id="library-section"
+    >
 
-    <div class="section-header">
-      <h2>Моя библиотека</h2>
-    </div>
+      <div class="library-toolbar">
 
-<nav
-  class="library-statuses"
-  id="library-statuses"
-  aria-label="Статус просмотра"
->
-  <button
-    type="button"
-    class="library-status is-active"
-    data-status=""
-  >
-    Все
-  </button>
-
-  <button
-    type="button"
-    class="library-status"
-    data-status="planned"
-  >
-    Запланировано
-  </button>
-
-  <button
-    type="button"
-    class="library-status"
-    data-status="watching"
-  >
-    Смотрю
-  </button>
-
-  <button
-    type="button"
-    class="library-status"
-    data-status="completed"
-  >
-    Завершено
-  </button>
-
-  <button
-    type="button"
-    class="library-status"
-    data-status="on_hold"
-  >
-    На паузе
-  </button>
-
-  <button
-    type="button"
-    class="library-status"
-    data-status="dropped"
-  >
-    Дропнуто
-  </button>
-</nav>
+        <div class="section-header">
+          <h2>Моя библиотека</h2>
+        </div>
 
 
-    <div class="library-actions">
-      <label class="sort-control">
-  <span>Жанр</span>
-  <select id="library-genre">
-    <option value="">Все жанры</option>
-  </select>
-</label>
-      <label class="sort-control">
-        <span>Сортировка</span>
-        <select id="library-sort">
-          <option value="added-desc">Недавно добавленные</option>
-          <option value="updated-desc">Недавно изменённые</option>
-          <option value="title-asc">Название А–Я</option>
-          <option value="title-desc">Название Я–А</option>
-          <option value="year-desc">Год: новые</option>
-          <option value="year-asc">Год: старые</option>
-          <option value="user-rating-desc">Моя оценка: высокая</option>
-          <option value="external-rating-desc">Рейтинг БД: высокий</option>
-        </select>
-      </label>
-
-      <div class="view-switcher" role="group" aria-label="Режим отображения">
-        <button
-          type="button"
-          class="view-switcher__button is-active"
-          data-view="cards"
+        <nav
+          class="library-statuses"
+          id="library-statuses"
+          aria-label="Статус просмотра"
         >
-          Карточки
-        </button>
+          <button
+            type="button"
+            class="library-status is-active"
+            data-status=""
+          >
+            Все
+          </button>
 
-        <button
-          type="button"
-          class="view-switcher__button"
-          data-view="list"
-        >
-          Список
-        </button>
+          <button
+            type="button"
+            class="library-status"
+            data-status="planned"
+          >
+            Запланировано
+          </button>
+
+          <button
+            type="button"
+            class="library-status"
+            data-status="watching"
+          >
+            Смотрю
+          </button>
+
+          <button
+            type="button"
+            class="library-status"
+            data-status="completed"
+          >
+            Завершено
+          </button>
+
+          <button
+            type="button"
+            class="library-status"
+            data-status="on_hold"
+          >
+            На паузе
+          </button>
+
+          <button
+            type="button"
+            class="library-status"
+            data-status="dropped"
+          >
+            Дропнуто
+          </button>
+        </nav>
+
+
+        <div class="library-actions">
+
+          <label class="sort-control">
+            <span>Жанр</span>
+
+            <select id="library-genre">
+              <option value="">
+                Все жанры
+              </option>
+            </select>
+          </label>
+
+
+          <label class="sort-control">
+            <span>Сортировка</span>
+
+            <select id="library-sort">
+              <option value="added-desc">
+                Недавно добавленные
+              </option>
+
+              <option value="updated-desc">
+                Недавно изменённые
+              </option>
+
+              <option value="title-asc">
+                Название А–Я
+              </option>
+
+              <option value="title-desc">
+                Название Я–А
+              </option>
+
+              <option value="year-desc">
+                Год: новые
+              </option>
+
+              <option value="year-asc">
+                Год: старые
+              </option>
+
+              <option value="user-rating-desc">
+                Моя оценка: высокая
+              </option>
+
+              <option value="external-rating-desc">
+                Рейтинг БД: высокий
+              </option>
+            </select>
+          </label>
+
+
+          <div
+            class="view-switcher"
+            role="group"
+            aria-label="Режим отображения"
+          >
+            <button
+              type="button"
+              class="view-switcher__button is-active"
+              data-view="cards"
+            >
+              Карточки
+            </button>
+
+            <button
+              type="button"
+              class="view-switcher__button"
+              data-view="list"
+            >
+              Список
+            </button>
+          </div>
+
+
+          <button
+            type="button"
+            class="button button--primary random-button"
+            id="random-picker"
+          >
+            Что посмотреть?
+          </button>
+
+        </div>
       </div>
 
-      <button
-        type="button"
-        class="button button--primary random-button"
-        id="random-picker"
-      >
-        Что посмотреть?
-      </button>
 
-    </div>
+      <section
+        class="library-stats"
+        id="library-stats"
+        aria-label="Статистика библиотеки"
+      ></section>
 
-  </div>
-  
-<section class="library-stats" id="library-stats"></section>
-<div class="card-grid" id="library-grid"></div>
 
-<nav
-  class="library-pagination"
-  id="library-pagination"
-  aria-label="Страницы библиотеки"
-  hidden
-></nav>
+      <div
+        class="card-grid"
+        id="library-grid"
+      ></div>
 
-</section>
+
+      <nav
+        class="library-pagination"
+        id="library-pagination"
+        aria-label="Страницы библиотеки"
+        hidden
+      ></nav>
+
+    </section>
 
   </main>
 
-  <div class="modal-overlay" id="modal-overlay" hidden>
-    <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Информация о названии"></div>
-  </div>
 
-  <div class="loading-overlay" id="loading-overlay" hidden>
-  <div class="loading-box">
-    <div class="loading-spinner"></div>
-
-    <h3 class="loading-title">Ищем медиа…</h3>
-
-    <p class="loading-text" id="loading-text">
-      Подбираем результаты из всех доступных баз данных
-    </p>
-  </div>
-</div>
-
-
-<!-- Authentication modal -->
-
-<div
-  class="auth-overlay"
-  id="auth-overlay"
-  hidden
->
   <div
-    class="auth-modal"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Авторизация"
+    class="modal-overlay"
+    id="modal-overlay"
+    hidden
   >
+    <div
+      class="modal"
+      id="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Информация о названии"
+    ></div>
+  </div>
 
-    <h2 id="auth-title">Вход</h2>
 
-    <form id="auth-form">
+  <div
+    class="loading-overlay"
+    id="loading-overlay"
+    hidden
+  >
+    <div class="loading-box">
+      <div class="loading-spinner"></div>
 
-
-
-<label>
-  Электронная почта
-
-  <input
-    type="email"
-    id="auth-email"
-    autocomplete="email"
-    required
-  />
-</label>
-
-      <label>
-        Пароль
-        <input
-          type="password"
-          id="auth-password"
-          autocomplete="current-password"
-          required
-        />
-      </label>
-
-<label
-  id="auth-password-confirm-field"
-  hidden
->
-  Повторите пароль
-
-  <input
-    type="password"
-    id="auth-password-confirm"
-    autocomplete="new-password"
-  />
-</label>
+      <h3 class="loading-title">
+        Ищем медиа…
+      </h3>
 
       <p
-        class="auth-error"
-        id="auth-error"
-        hidden
-      ></p>
-
-      <button
-        type="submit"
-        class="button button--primary"
-        id="auth-submit"
+        class="loading-text"
+        id="loading-text"
       >
-        Войти
-      </button>
+        Подбираем результаты из всех доступных баз данных
+      </p>
+    </div>
+  </div>
 
-    </form>
 
-    <div class="auth-switch">
-      <span id="auth-switch-text">
-        Нет аккаунта?
-      </span>
+  <div
+    class="auth-overlay"
+    id="auth-overlay"
+    hidden
+  >
+    <div
+      class="auth-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Авторизация"
+    >
+
+      <h2 id="auth-title">
+        Вход
+      </h2>
+
+      <form id="auth-form">
+
+        <label>
+          Электронная почта
+
+          <input
+            type="email"
+            id="auth-email"
+            autocomplete="email"
+            required
+          >
+        </label>
+
+
+        <label>
+          Пароль
+
+          <input
+            type="password"
+            id="auth-password"
+            autocomplete="current-password"
+            required
+          >
+        </label>
+
+
+        <label
+          id="auth-password-confirm-field"
+          hidden
+        >
+          Повторите пароль
+
+          <input
+            type="password"
+            id="auth-password-confirm"
+            autocomplete="new-password"
+          >
+        </label>
+
+
+        <p
+          class="auth-error"
+          id="auth-error"
+          hidden
+        ></p>
+
+
+        <button
+          type="submit"
+          class="button button--primary"
+          id="auth-submit"
+        >
+          Войти
+        </button>
+
+      </form>
+
+
+      <div class="auth-switch">
+        <span id="auth-switch-text">
+          Нет аккаунта?
+        </span>
+
+        <button
+          type="button"
+          class="text-button"
+          id="auth-switch"
+        >
+          Зарегистрироваться
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <div
+    class="auth-overlay"
+    id="auth-modal"
+    hidden
+  >
+    <div
+      class="auth-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Аккаунт"
+    >
+
+      <h2>
+        Аккаунт
+      </h2>
+
+      <p class="account-email">
+        <span id="account-email"></span>
+      </p>
 
       <button
         type="button"
-        class="text-button"
-        id="auth-switch"
+        class="button button--danger"
+        id="account-logout"
       >
-        Зарегистрироваться
+        Выйти
       </button>
+
     </div>
-
   </div>
-</div>
 
-
-<!-- Account modal -->
-
-<div
-  class="auth-overlay"
-  id="auth-modal"
-  hidden
->
-  <div
-    class="auth-modal"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Аккаунт"
-  >
-
-    <h2>Аккаунт</h2>
-
-    <p class="account-email">
-      <span id="account-email"></span>
-    </p>
-
-    <button
-      type="button"
-      class="button button--danger"
-      id="account-logout"
-    >
-      Выйти
-    </button>
-
-  </div>
-</div>
 
   <footer class="app-footer">
-    <p>WhatWeWatch — личная медиатека</p>
+    <p>
+      WhatWeWatch — личная медиатека
+    </p>
   </footer>
 
-  <script type="module" src="js/app.js"></script>
+
+  <script
+    type="module"
+    src="js/app.js"
+  ></script>
+
 </body>
 </html>

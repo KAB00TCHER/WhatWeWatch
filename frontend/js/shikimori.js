@@ -1,203 +1,231 @@
 // js/shikimori.js
-// Everything related to Shikimori lives here — fetch requests and conversion
-// of the API response into the app's Unified Media Item model.
-//
-// Requests are routed through our own Vercel serverless API (/api/shikimori)
-// instead of a public CORS proxy. This removes the dependency on allorigins
-// and avoids CORS failures.
 
-const POSTER_BASE = 'https://shikimori.one';
+const POSTER_BASE =
+  'https://shikimori.one';
 
-function normalizeGenres(genres) {
+const REQUEST_TIMEOUT =
+  8000;
+
+
+function normalizeGenres(
+  genres
+) {
   if (!Array.isArray(genres)) {
     return [];
   }
 
-  const result = new Map();
+  const seen = new Map();
 
   for (const genre of genres) {
-    const name = String(
-      genre?.russian ||
-      genre?.name ||
-      genre ||
-      ''
-    ).trim();
+    const name =
+      String(
+        genre?.russian ??
+        genre?.name ??
+        genre ??
+        ''
+      ).trim();
 
-    if (!name) continue;
+    if (!name) {
+      continue;
+    }
 
-    const key = name.toLocaleLowerCase('ru-RU');
+    const key =
+      name.toLocaleLowerCase(
+        'ru-RU'
+      );
 
-    if (!result.has(key)) {
-      result.set(key, name);
+    if (!seen.has(key)) {
+      seen.set(key, name);
     }
   }
 
-  return [...result.values()];
+  return [...seen.values()];
 }
 
-function cleanShikimoriDescription(text) {
+
+function cleanDescription(
+  text
+) {
   return String(text || '')
-    .replace(/\[[^\]]+\]/g, '')
+    .replace(
+      /\[[^\]]+\]/g,
+      ''
+    )
     .trim();
 }
 
 
-function mapResultToModel(raw) {
+function imageUrl(path) {
+  return path
+    ? POSTER_BASE + path
+    : null;
+}
+
+
+function mapAnime(raw) {
+  const poster =
+    imageUrl(
+      raw.image?.original
+    );
+
+  const year =
+    raw.aired_on
+      ? Number(
+          String(
+            raw.aired_on
+          ).slice(0, 4)
+        )
+      : null;
+
   return {
-    id: `shikimori-anime-${raw.id}`,
-    provider: 'shikimori',
-    providerId: raw.id,
+    id:
+      `shikimori-anime-${raw.id}`,
 
-    title: raw.russian || raw.name,
-    originalTitle: raw.name,
+    provider:
+      'shikimori',
 
-    type: 'anime',
+    providerId:
+      raw.id,
 
-    year: raw.aired_on
-      ? Number(String(raw.aired_on).slice(0, 4))
-      : null,
+    title:
+      raw.russian ||
+      raw.name ||
+      `Anime ${raw.id}`,
+
+    originalTitle:
+      raw.name ||
+      raw.russian ||
+      `Anime ${raw.id}`,
+
+    type:
+      'anime',
+
+    year,
 
     rating:
-      raw.score && Number(raw.score) > 0
+      raw.score &&
+      Number(raw.score) > 0
         ? Number(raw.score)
         : null,
 
-    poster: raw.image?.original
-      ? POSTER_BASE + raw.image.original
-      : null,
+    poster,
 
-    backdrop: raw.image?.original
-      ? POSTER_BASE + raw.image.original
-      : null,
+    backdrop:
+      raw.screenshots?.length
+        ? imageUrl(
+            raw.screenshots[0].original
+          )
+        : poster,
 
-    description: cleanShikimoriDescription(raw.description),
+    description:
+      cleanDescription(
+        raw.description
+      ),
 
-genres: normalizeGenres(raw.genres),
+    genres:
+      normalizeGenres(
+        raw.genres
+      ),
 
-    runtime: raw.duration || null,
+    runtime:
+      raw.duration || null,
 
-    episodes: raw.episodes || null,
+    episodes:
+      raw.episodes || null,
 
-    playtime: null,
+    playtime:
+      null,
   };
 }
 
-async function fetchWithTimeout(url, timeout = 8000) {
-  const controller = new AbortController();
 
-  const timer = setTimeout(() => controller.abort(), timeout);
+async function request(
+  params
+) {
+  const controller =
+    new AbortController();
+
+  const timer =
+    setTimeout(
+      () =>
+        controller.abort(),
+      REQUEST_TIMEOUT
+    );
 
   try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-    });
+    const query =
+      new URLSearchParams(
+        params
+      );
 
-    return response;
+    const response =
+      await fetch(
+        `/api/shikimori?${query}`,
+        {
+          signal:
+            controller.signal,
+        }
+      );
+
+    if (!response.ok) {
+      throw new Error(
+        `Shikimori request failed: ${response.status}`
+      );
+    }
+
+    return response.json();
+
   } finally {
     clearTimeout(timer);
   }
 }
 
-export async function searchShikimori(query) {
-  if (!query.trim()) return [];
+
+export async function searchShikimori(
+  query
+) {
+  const text =
+    query.trim();
+
+  if (!text) {
+    return [];
+  }
 
   try {
-    const res = await fetchWithTimeout(
-      `/api/shikimori?q=${encodeURIComponent(query)}`
+    const data =
+      await request({
+        q: text,
+      });
+
+    return (data || [])
+      .map(mapAnime);
+
+  } catch (error) {
+    console.warn(
+      '[shikimori] search error:',
+      error
     );
 
-    if (!res.ok) {
-      throw new Error(`Shikimori search failed: ${res.status}`);
-    }
-
-    const data = await res.json();
-
-    return (data || []).map(mapResultToModel);
-
-  } catch (err) {
-    console.warn('[shikimori] search error', err);
     return [];
   }
 }
 
-export async function getShikimoriDetails(providerId) {
+
+export async function getShikimoriDetails(
+  providerId
+) {
   try {
-    const res = await fetchWithTimeout(
-      `/api/shikimori?id=${providerId}`
-    );
+    const raw =
+      await request({
+        id: providerId,
+      });
 
-    if (!res.ok) {
-      throw new Error(
-        `Shikimori details failed: ${res.status}`
-      );
-    }
+    return mapAnime(raw);
 
-    const raw = await res.json();
-
-    return {
-      id: `shikimori-anime-${raw.id}`,
-      provider: 'shikimori',
-      providerId: raw.id,
-
-      title:
-        raw.russian ||
-        raw.name ||
-        `Anime ${raw.id}`,
-
-      originalTitle:
-        raw.name ||
-        raw.russian ||
-        `Anime ${raw.id}`,
-
-      type: 'anime',
-
-      year: raw.aired_on
-        ? Number(
-            String(raw.aired_on).slice(0, 4)
-          )
-        : null,
-
-      rating:
-        raw.score &&
-        Number(raw.score) > 0
-          ? Number(raw.score)
-          : null,
-
-      poster:
-        raw.image?.original
-          ? POSTER_BASE +
-            raw.image.original
-          : null,
-
-      backdrop:
-        raw.screenshots?.length
-          ? POSTER_BASE +
-            raw.screenshots[0].original
-          : (
-              raw.image?.original
-                ? POSTER_BASE +
-                  raw.image.original
-                : null
-            ),
-
-      description:
-        cleanShikimoriDescription(raw.description),
-
-genres: normalizeGenres(raw.genres),
-
-      runtime:
-        raw.duration || null,
-
-      episodes:
-        raw.episodes || null,
-
-      playtime: null,
-    };
-
-  } catch (err) {
+  } catch (error) {
     console.warn(
-      '[shikimori] details error',
-      err
+      '[shikimori] details error:',
+      error
     );
 
     return null;

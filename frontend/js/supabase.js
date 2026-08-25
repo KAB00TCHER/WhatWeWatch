@@ -1,4 +1,11 @@
 // js/supabase.js
+//
+// Единая точка работы с:
+// - Supabase Auth
+// - Supabase REST API
+// - локальной сессией
+// =========================================================
+
 
 const SUPABASE_URL =
   'https://ppakdykkaocmvfncabun.supabase.co';
@@ -6,10 +13,19 @@ const SUPABASE_URL =
 const SUPABASE_PUBLISHABLE_KEY =
   'sb_publishable_pi8y8cdWltiYD8SIrHJ2cQ_LZ9e_Aao';
 
+const SESSION_KEY =
+  'whatwewatch:session';
 
 const AUTH_URL =
   `${SUPABASE_URL}/auth/v1`;
 
+const REST_URL =
+  `${SUPABASE_URL}/rest/v1`;
+
+
+// =========================================================
+// HEADERS
+// =========================================================
 
 function authHeaders(accessToken = null) {
   return {
@@ -21,75 +37,150 @@ function authHeaders(accessToken = null) {
         SUPABASE_PUBLISHABLE_KEY
       }`,
 
-    'Content-Type': 'application/json',
+    'Content-Type':
+      'application/json',
   };
 }
 
+
+// =========================================================
+// RESPONSE PARSING
+// =========================================================
+
+async function parseResponse(response) {
+  const text =
+    await response.text();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+
+function getErrorMessage(
+  data,
+  fallback
+) {
+  return (
+    data?.msg ||
+    data?.message ||
+    data?.error_description ||
+    data?.error ||
+    fallback
+  );
+}
+
+
+// =========================================================
+// AUTH REQUEST
+// =========================================================
 
 async function authRequest(
   path,
   options = {}
 ) {
-  const response = await fetch(
-    `${AUTH_URL}${path}`,
-    {
-      ...options,
+  const {
+    accessToken,
+    headers,
+    ...fetchOptions
+  } = options;
 
-      headers: {
-        ...authHeaders(
-          options.accessToken
-        ),
+  const response =
+    await fetch(
+      `${AUTH_URL}${path}`,
+      {
+        ...fetchOptions,
 
-        ...(options.headers || {}),
-      },
-    }
-  );
+        headers: {
+          ...authHeaders(accessToken),
+          ...(headers || {}),
+        },
+      }
+    );
 
-
-  const text =
-    await response.text();
-
-
-  let data = null;
-
-
-  try {
-    data = text
-      ? JSON.parse(text)
-      : null;
-
-  } catch {
-    data = text;
-  }
-
+  const data =
+    await parseResponse(response);
 
   if (!response.ok) {
-
-    const message =
-      data?.msg ||
-      data?.message ||
-      data?.error_description ||
-      data?.error ||
-      `Supabase Auth error ${response.status}`;
-
-
-    throw new Error(message);
+    throw new Error(
+      getErrorMessage(
+        data,
+        `Supabase Auth error ${response.status}`
+      )
+    );
   }
-
 
   return data;
 }
 
 
 // =========================================================
-// SIGN UP
+// SESSION
+// =========================================================
+
+export function getSession() {
+  try {
+    const raw =
+      localStorage.getItem(
+        SESSION_KEY
+      );
+
+    return raw
+      ? JSON.parse(raw)
+      : null;
+
+  } catch (error) {
+    console.warn(
+      '[supabase] failed to read session:',
+      error
+    );
+
+    return null;
+  }
+}
+
+
+function saveSession(data) {
+  if (!data?.access_token) {
+    return;
+  }
+
+  localStorage.setItem(
+    SESSION_KEY,
+    JSON.stringify(data)
+  );
+}
+
+
+function clearSession() {
+  localStorage.removeItem(
+    SESSION_KEY
+  );
+}
+
+
+export function getAccessToken() {
+  return (
+    getSession()?.access_token ||
+    null
+  );
+}
+
+
+// =========================================================
+// AUTH
 // =========================================================
 
 export async function signUp(
   email,
   password
 ) {
-
   const data =
     await authRequest(
       '/signup',
@@ -103,29 +194,16 @@ export async function signUp(
       }
     );
 
-
-  if (data?.access_token) {
-
-    localStorage.setItem(
-      'whatwewatch:session',
-      JSON.stringify(data)
-    );
-  }
-
+  saveSession(data);
 
   return data;
 }
 
 
-// =========================================================
-// SIGN IN
-// =========================================================
-
 export async function signIn(
   email,
   password
 ) {
-
   const data =
     await authRequest(
       '/token?grant_type=password',
@@ -139,91 +217,35 @@ export async function signIn(
       }
     );
 
-
-  if (data?.access_token) {
-
-    localStorage.setItem(
-      'whatwewatch:session',
-      JSON.stringify(data)
-    );
-  }
-
+  saveSession(data);
 
   return data;
 }
 
 
-// =========================================================
-// SIGN OUT
-// =========================================================
-
 export async function signOut() {
+  const token =
+    getAccessToken();
 
-  const session =
-    getSession();
-
-
-  if (session?.access_token) {
-
+  if (token) {
     try {
-
       await authRequest(
         '/logout',
         {
           method: 'POST',
-
-          accessToken:
-            session.access_token,
+          accessToken: token,
         }
       );
 
-    } catch (err) {
-
+    } catch (error) {
       console.warn(
-        '[auth] logout request failed',
-        err
+        '[supabase] logout request failed:',
+        error
       );
     }
   }
 
-
-  localStorage.removeItem(
-    'whatwewatch:session'
-  );
-}
-
-
-// =========================================================
-// SESSION
-// =========================================================
-
-export function getSession() {
-
-  try {
-
-    const raw =
-      localStorage.getItem(
-        'whatwewatch:session'
-      );
-
-
-    return raw
-      ? JSON.parse(raw)
-      : null;
-
-  } catch {
-
-    return null;
-  }
-}
-
-
-export function getAccessToken() {
-
-  return (
-    getSession()?.access_token ||
-    null
-  );
+  clearSession();
 }
 
 
@@ -232,39 +254,29 @@ export function getAccessToken() {
 // =========================================================
 
 export async function getCurrentUser() {
-
   const token =
     getAccessToken();
-
 
   if (!token) {
     return null;
   }
 
-
   try {
-
     return await authRequest(
       '/user',
       {
         method: 'GET',
-
         accessToken: token,
       }
     );
 
-  } catch (err) {
-
+  } catch (error) {
     console.warn(
-      '[auth] session is invalid:',
-      err
+      '[supabase] session is invalid:',
+      error
     );
 
-
-    localStorage.removeItem(
-      'whatwewatch:session'
-    );
-
+    clearSession();
 
     return null;
   }
@@ -272,17 +284,15 @@ export async function getCurrentUser() {
 
 
 // =========================================================
-// SUPABASE DATABASE REQUEST
+// DATABASE REQUEST
 // =========================================================
 
 export async function supabaseRequest(
   path,
   options = {}
 ) {
-
   const token =
     getAccessToken();
-
 
   if (!token) {
     throw new Error(
@@ -290,16 +300,18 @@ export async function supabaseRequest(
     );
   }
 
+  const {
+    headers,
+    ...fetchOptions
+  } = options;
 
   const response =
     await fetch(
-      `${SUPABASE_URL}/rest/v1/${path}`,
-
+      `${REST_URL}/${path}`,
       {
-        ...options,
+        ...fetchOptions,
 
         headers: {
-
           apikey:
             SUPABASE_PUBLISHABLE_KEY,
 
@@ -309,38 +321,22 @@ export async function supabaseRequest(
           'Content-Type':
             'application/json',
 
-          ...(options.headers || {}),
+          ...(headers || {}),
         },
       }
     );
 
-
-  const text =
-    await response.text();
-
-
-  let data = null;
-
-
-  try {
-
-    data = text
-      ? JSON.parse(text)
-      : null;
-
-  } catch {
-
-    data = text;
-  }
-
+  const data =
+    await parseResponse(response);
 
   if (!response.ok) {
-
     throw new Error(
-      `Supabase ${response.status}: ${text}`
+      getErrorMessage(
+        data,
+        `Supabase ${response.status}`
+      )
     );
   }
-
 
   return data;
 }

@@ -12,53 +12,87 @@ import {
 // AUTH API
 // =========================================================
 
-export async function register(email, password) {
-  return signUp(email, password);
+export function register(
+  email,
+  password
+) {
+  return signUp(
+    email,
+    password
+  );
 }
 
-export async function login(email, password) {
-  return signIn(email, password);
+
+export function login(
+  email,
+  password
+) {
+  return signIn(
+    email,
+    password
+  );
 }
 
-export async function logout() {
+
+export function logout() {
   return signOut();
 }
 
-export async function getCurrentUser() {
+
+export function getCurrentUser() {
   return supabaseGetCurrentUser();
 }
 
 
 // =========================================================
-// AUTH UI
+// STATE
 // =========================================================
 
 let currentUser = null;
-
 let mode = 'login';
 
+let elements = null;
+
+
+// =========================================================
+// DOM
+// =========================================================
 
 function getElements() {
-  return {
-    // Account button
-    accountButton:
-      document.getElementById('account-button'),
+  if (elements) {
+    return elements;
+  }
 
-    // Authentication modal
+  elements = {
+    accountButton:
+      document.getElementById(
+        'account-button'
+      ),
+
     authOverlay:
-      document.getElementById('auth-overlay'),
+      document.getElementById(
+        'auth-overlay'
+      ),
 
     authForm:
-      document.getElementById('auth-form'),
+      document.getElementById(
+        'auth-form'
+      ),
 
     authTitle:
-      document.getElementById('auth-title'),
+      document.getElementById(
+        'auth-title'
+      ),
 
     authEmail:
-      document.getElementById('auth-email'),
+      document.getElementById(
+        'auth-email'
+      ),
 
     authPassword:
-      document.getElementById('auth-password'),
+      document.getElementById(
+        'auth-password'
+      ),
 
     authPasswordConfirm:
       document.getElementById(
@@ -71,27 +105,62 @@ function getElements() {
       ),
 
     authSubmit:
-      document.getElementById('auth-submit'),
+      document.getElementById(
+        'auth-submit'
+      ),
 
     authSwitch:
-      document.getElementById('auth-switch'),
+      document.getElementById(
+        'auth-switch'
+      ),
 
     authSwitchText:
-      document.getElementById('auth-switch-text'),
+      document.getElementById(
+        'auth-switch-text'
+      ),
 
     authError:
-      document.getElementById('auth-error'),
+      document.getElementById(
+        'auth-error'
+      ),
 
-    // Account modal
     accountModal:
-      document.getElementById('auth-modal'),
+      document.getElementById(
+        'auth-modal'
+      ),
 
     accountEmail:
-      document.getElementById('account-email'),
+      document.getElementById(
+        'account-email'
+      ),
 
     accountLogout:
-      document.getElementById('account-logout'),
+      document.getElementById(
+        'account-logout'
+      ),
   };
+
+  return elements;
+}
+
+
+// =========================================================
+// AUTH CHANGE EVENT
+// =========================================================
+
+function dispatchAuthChange(
+  user
+) {
+  window.dispatchEvent(
+    new CustomEvent(
+      'authchange',
+      {
+        detail: {
+          user,
+        },
+      }
+    )
+  );
 }
 
 
@@ -99,12 +168,16 @@ function getElements() {
 // MODALS
 // =========================================================
 
-function openAuthModal(nextMode = 'login') {
-  const els = getElements();
+function openAuthModal(
+  nextMode = 'login'
+) {
+  const els =
+    getElements();
 
   mode = nextMode;
 
-  const isLogin = mode === 'login';
+  const isLogin =
+    mode === 'login';
 
   els.authTitle.textContent =
     isLogin
@@ -126,19 +199,11 @@ function openAuthModal(nextMode = 'login') {
       ? 'Зарегистрироваться'
       : 'Войти';
 
-  // Поле подтверждения пароля нужно
-  // только при регистрации.
-  if (els.authPasswordConfirmField) {
-    els.authPasswordConfirmField.hidden =
-      isLogin;
-  }
+  els.authPasswordConfirmField.hidden =
+    isLogin;
 
-  // При входе подтверждение пароля
-  // не участвует в форме.
-  if (els.authPasswordConfirm) {
-    els.authPasswordConfirm.required =
-      !isLogin;
-  }
+  els.authPasswordConfirm.required =
+    !isLogin;
 
   els.authError.hidden = true;
   els.authError.textContent = '';
@@ -147,33 +212,35 @@ function openAuthModal(nextMode = 'login') {
 
   els.authOverlay.hidden = false;
 
-  setTimeout(() => {
+  requestAnimationFrame(() => {
     els.authEmail.focus();
-  }, 0);
+  });
 }
 
 
 function closeAuthModal() {
-  const els = getElements();
-
-  els.authOverlay.hidden = true;
+  getElements()
+    .authOverlay
+    .hidden = true;
 }
 
 
 function openAccountModal() {
-  const els = getElements();
+  const els =
+    getElements();
 
   els.accountEmail.textContent =
     currentUser?.email || '';
 
-  els.accountModal.hidden = false;
+  els.accountModal.hidden =
+    false;
 }
 
 
 function closeAccountModal() {
-  const els = getElements();
-
-  els.accountModal.hidden = true;
+  getElements()
+    .accountModal
+    .hidden = true;
 }
 
 
@@ -182,26 +249,31 @@ function closeAccountModal() {
 // =========================================================
 
 function updateAccountButton() {
-  const els = getElements();
+  const button =
+    getElements()
+      .accountButton;
 
-  if (!els.accountButton) {
+  if (!button) {
     return;
   }
 
   if (currentUser) {
-    els.accountButton.textContent =
+    button.textContent =
       currentUser.email;
 
-    els.accountButton.classList.add(
+    button.classList.add(
       'is-authenticated'
     );
-  } else {
-    els.accountButton.textContent = 'Войти';
 
-    els.accountButton.classList.remove(
-      'is-authenticated'
-    );
+    return;
   }
+
+  button.textContent =
+    'Войти';
+
+  button.classList.remove(
+    'is-authenticated'
+  );
 }
 
 
@@ -209,22 +281,31 @@ function updateAccountButton() {
 // ERROR
 // =========================================================
 
-function showAuthError(message) {
-  const els = getElements();
+function showAuthError(
+  message
+) {
+  const error =
+    getElements()
+      .authError;
 
-  els.authError.textContent = message;
-  els.authError.hidden = false;
+  error.textContent =
+    message;
+
+  error.hidden = false;
 }
 
 
 // =========================================================
-// FORM SUBMIT
+// SUBMIT
 // =========================================================
 
-async function handleAuthSubmit(event) {
+async function handleAuthSubmit(
+  event
+) {
   event.preventDefault();
 
-  const els = getElements();
+  const els =
+    getElements();
 
   const email =
     els.authEmail.value.trim();
@@ -235,11 +316,6 @@ async function handleAuthSubmit(event) {
   const passwordConfirm =
     els.authPasswordConfirm.value;
 
-
-  // -----------------------------------------
-  // Basic validation
-  // -----------------------------------------
-
   if (!email || !password) {
     showAuthError(
       'Заполни email и пароль.'
@@ -248,13 +324,7 @@ async function handleAuthSubmit(event) {
     return;
   }
 
-
-  // -----------------------------------------
-  // Registration validation
-  // -----------------------------------------
-
   if (mode === 'register') {
-
     if (password.length < 6) {
       showAuthError(
         'Пароль должен содержать минимум 6 символов.'
@@ -263,7 +333,10 @@ async function handleAuthSubmit(event) {
       return;
     }
 
-    if (password !== passwordConfirm) {
+    if (
+      password !==
+      passwordConfirm
+    ) {
       showAuthError(
         'Пароли не совпадают.'
       );
@@ -272,94 +345,48 @@ async function handleAuthSubmit(event) {
     }
   }
 
-
-  // -----------------------------------------
-  // Disable button
-  // -----------------------------------------
-
-  els.authSubmit.disabled = true;
+  els.authSubmit.disabled =
+    true;
 
   els.authSubmit.textContent =
     'Подождите...';
 
-  els.authError.hidden = true;
-
+  els.authError.hidden =
+    true;
 
   try {
+    const request =
+      mode === 'login'
+        ? login
+        : register;
 
-    // ---------------------------------------
-    // LOGIN
-    // ---------------------------------------
+    const data =
+      await request(
+        email,
+        password
+      );
 
-    if (mode === 'login') {
+    currentUser =
+      data?.user ||
+      await getCurrentUser();
 
-      const data =
-        await login(
-          email,
-          password
-        );
+    closeAuthModal();
+    updateAccountButton();
 
-          currentUser =
-            data?.user ||
-            await getCurrentUser();
+    dispatchAuthChange(
+      currentUser
+    );
 
-          closeAuthModal();
-
-          updateAccountButton();
-
-          window.dispatchEvent(
-            new CustomEvent('authchange', {
-              detail: {
-                user: currentUser,
-              },
-            })
-          );
-
-          console.log(
-            '[auth] Login successful:',
-            currentUser
-          );
-
-    }
-
-
-    // ---------------------------------------
-    // REGISTRATION
-    // ---------------------------------------
-
-    else {
-
-      const data =
-        await register(
-          email,
-          password
-        );
-
-              currentUser =
-          data?.user ||
-          await getCurrentUser();
-
-        closeAuthModal();
-
-        updateAccountButton();
-
-        window.dispatchEvent(
-          new CustomEvent('authchange', {
-            detail: {
-              user: currentUser,
-            },
-          })
-        );
-
-        console.log(
-          '[auth] Registration successful:',
-          currentUser
-        );
-    }
-
+    console.log(
+      `[auth] ${
+        mode === 'login'
+          ? 'Login'
+          : 'Registration'
+      } successful:`,
+      currentUser
+    );
 
   } catch (error) {
-
     console.error(
       '[auth] Error:',
       error
@@ -370,10 +397,9 @@ async function handleAuthSubmit(event) {
       'Не удалось выполнить операцию.'
     );
 
-
   } finally {
-
-    els.authSubmit.disabled = false;
+    els.authSubmit.disabled =
+      false;
 
     els.authSubmit.textContent =
       mode === 'login'
@@ -389,29 +415,22 @@ async function handleAuthSubmit(event) {
 
 async function handleLogout() {
   try {
-
     await logout();
 
-currentUser = null;
+    currentUser = null;
 
-closeAccountModal();
+    closeAccountModal();
+    updateAccountButton();
 
-updateAccountButton();
+    dispatchAuthChange(
+      null
+    );
 
-window.dispatchEvent(
-  new CustomEvent('authchange', {
-    detail: {
-      user: null,
-    },
-  })
-);
-
-console.log(
-  '[auth] Logged out'
-);
+    console.log(
+      '[auth] Logged out'
+    );
 
   } catch (error) {
-
     console.error(
       '[auth] Logout failed:',
       error
@@ -425,21 +444,14 @@ console.log(
 // =========================================================
 
 export async function initAuthUI() {
-
-  const els = getElements();
-
-
-  // -----------------------------------------
-  // Check existing session
-  // -----------------------------------------
+  const els =
+    getElements();
 
   try {
-
     currentUser =
       await getCurrentUser();
 
   } catch (error) {
-
     console.error(
       '[auth] Failed to restore session:',
       error
@@ -448,103 +460,63 @@ export async function initAuthUI() {
     currentUser = null;
   }
 
-
   updateAccountButton();
-
-
-  // -----------------------------------------
-  // Account button
-  // -----------------------------------------
 
   els.accountButton.addEventListener(
     'click',
     () => {
-
       if (currentUser) {
         openAccountModal();
       } else {
         openAuthModal('login');
       }
-
     }
   );
-
-
-  // -----------------------------------------
-  // Auth form
-  // -----------------------------------------
 
   els.authForm.addEventListener(
     'submit',
     handleAuthSubmit
   );
 
-
-  // -----------------------------------------
-  // Switch login / registration
-  // -----------------------------------------
-
   els.authSwitch.addEventListener(
     'click',
     () => {
-
       openAuthModal(
         mode === 'login'
           ? 'register'
           : 'login'
       );
-
     }
   );
 
-
-  // -----------------------------------------
-  // Close auth modal by clicking backdrop
-  // -----------------------------------------
-
   els.authOverlay.addEventListener(
     'click',
-    (event) => {
-
+    event => {
       if (
         event.target ===
         els.authOverlay
       ) {
         closeAuthModal();
       }
-
     }
   );
 
-
-  // -----------------------------------------
-  // Close account modal by clicking backdrop
-  // -----------------------------------------
-
   els.accountModal.addEventListener(
     'click',
-    (event) => {
-
+    event => {
       if (
         event.target ===
         els.accountModal
       ) {
         closeAccountModal();
       }
-
     }
   );
-
-
-  // -----------------------------------------
-  // Logout
-  // -----------------------------------------
 
   els.accountLogout.addEventListener(
     'click',
     handleLogout
   );
-
 
   console.log(
     '[auth] UI initialized'

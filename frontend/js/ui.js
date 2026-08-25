@@ -1,9 +1,3 @@
-// js/ui.js
-// All interface rendering lives here, and only here. This file never
-// imports api.js or storage.js and never calls fetch() or localStorage —
-// it only ever receives data and callback functions from home.js and
-// renders. That's what keeps the UI independent of the API (Principle #1).
-
 const STATUS_LABELS = {
   planned: 'Запланировано',
   watching: 'Смотрю',
@@ -19,15 +13,56 @@ const TYPE_LABELS = {
   game: 'Игры',
 };
 
+
+// =========================================================
+// COMMON
+// =========================================================
+
+function escapeHtml(value) {
+  const div =
+    document.createElement('div');
+
+  div.textContent =
+    value ?? '';
+
+  return div.innerHTML;
+}
+
+
 function secondaryLine(item) {
-  if (item.type === 'movie' && item.runtime) return `${item.runtime} мин`;
-  if ((item.type === 'series' || item.type === 'anime') && item.episodes) return `${item.episodes} эп`;
-  if (item.type === 'game' && item.playtime) return `${item.playtime}ч`;
+  if (
+    item.type === 'movie' &&
+    item.runtime
+  ) {
+    return `${item.runtime} мин`;
+  }
+
+  if (
+    (
+      item.type === 'series' ||
+      item.type === 'anime'
+    ) &&
+    item.episodes
+  ) {
+    return `${item.episodes} эп`;
+  }
+
+  if (
+    item.type === 'game' &&
+    item.playtime
+  ) {
+    return `${item.playtime}ч`;
+  }
+
   return '';
 }
 
+
 function genresLine(item) {
-  if (!Array.isArray(item.genres) || !item.genres.length) {
+  if (
+    !Array.isArray(item.genres) ||
+    !item.genres.length
+  ) {
     return '';
   }
 
@@ -36,117 +71,278 @@ function genresLine(item) {
     .join(' · ');
 }
 
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str ?? '';
-  return div.innerHTML;
+
+function metaLine(item) {
+  return [
+    item.year,
+    secondaryLine(item),
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }
 
-export function renderGrid(container, items, { onSelect } = {}) {
-  container.classList.remove('card-grid--list');
-  container.classList.add('card-grid');
+
+function activateOnKeyboard(
+  element,
+  callback
+) {
+  element.addEventListener(
+    'click',
+    callback
+  );
+
+  element.addEventListener(
+    'keydown',
+    event => {
+      if (
+        event.key !== 'Enter' &&
+        event.key !== ' '
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      callback();
+    }
+  );
+}
+
+
+function posterMarkup(
+  item,
+  className = 'card__poster'
+) {
+  if (item.poster) {
+    return `
+      <img
+        class="${className}"
+        src="${item.poster}"
+        alt="${escapeHtml(item.title)}"
+        loading="lazy"
+      >
+    `;
+  }
+
+  return `
+    <div class="${className} ${className}--placeholder">
+      ${escapeHtml(
+        (item.title || '?')[0]
+      )}
+    </div>
+  `;
+}
+
+
+function ratingMarkup(
+  value,
+  className,
+  label
+) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+    return '';
+  }
+
+  return `
+    <span class="${className}">
+      ★ ${escapeHtml(value)}
+      <small>${label}</small>
+    </span>
+  `;
+}
+
+
+// =========================================================
+// GRID / LIST
+// =========================================================
+
+export function renderGrid(
+  container,
+  items,
+  { onSelect } = {}
+) {
+  container.classList.remove(
+    'card-grid--list'
+  );
+
+  container.classList.add(
+    'card-grid'
+  );
 
   container.innerHTML = '';
 
   if (!items.length) {
-    renderEmptyState(container, 'Здесь пока ничего нет.');
+    renderEmptyState(
+      container,
+      'Здесь пока ничего нет.'
+    );
+
     return;
   }
-  const fragment = document.createDocumentFragment();
-  items.forEach((item) => fragment.appendChild(renderCard(item, onSelect)));
+
+  const fragment =
+    document.createDocumentFragment();
+
+  items.forEach(item =>
+    fragment.appendChild(
+      renderCard(
+        item,
+        onSelect
+      )
+    )
+  );
+
   container.appendChild(fragment);
 }
 
-export function renderList(container, items, { onSelect } = {}) {
-  container.classList.remove('card-grid');
-  container.classList.add('card-grid--list');
+
+export function renderList(
+  container,
+  items,
+  { onSelect } = {}
+) {
+  container.classList.remove(
+    'card-grid'
+  );
+
+  container.classList.add(
+    'card-grid--list'
+  );
 
   container.innerHTML = '';
 
   if (!items.length) {
-    renderEmptyState(container, 'Здесь пока ничего нет.');
+    renderEmptyState(
+      container,
+      'Здесь пока ничего нет.'
+    );
+
     return;
   }
 
-  const fragment = document.createDocumentFragment();
+  const fragment =
+    document.createDocumentFragment();
 
-  items.forEach((item) => {
-    const row = document.createElement('article');
-    row.className = 'library-list-item';
+  items.forEach(item => {
+    const row =
+      document.createElement('article');
+
+    row.className =
+      'library-list-item';
+
     row.tabIndex = 0;
 
-    const externalRating = item.rating != null
-      ? `<span class="library-list-item__rating">★ ${item.rating} <small>БД</small></span>`
-      : '<span class="library-list-item__rating library-list-item__empty">—</span>';
-
-    const userRating = item.userRating != null
-      ? `<span class="library-list-item__rating library-list-item__rating--user">★ ${item.userRating} <small>Моя</small></span>`
-      : '<span class="library-list-item__rating library-list-item__empty">—</span>';
-
-    const note = item.note?.trim()
-      ? `<span class="library-list-item__note">${escapeHtml(item.note.trim())}</span>`
-      : '';
+    const note =
+      item.note?.trim()
+        ? `
+          <span class="library-list-item__note">
+            ${escapeHtml(
+              item.note.trim()
+            )}
+          </span>
+        `
+        : '';
 
     row.innerHTML = `
       <div class="library-list-item__poster">
         ${
           item.poster
-            ? `<img src="${item.poster}" alt="" loading="lazy">`
-            : `<span>${escapeHtml((item.title || '?')[0])}</span>`
+            ? `
+              <img
+                src="${item.poster}"
+                alt=""
+                loading="lazy"
+              >
+            `
+            : `
+              <span>
+                ${escapeHtml(
+                  (item.title || '?')[0]
+                )}
+              </span>
+            `
         }
       </div>
 
       <div class="library-list-item__info">
         <span class="card__type">
-          ${TYPE_LABELS[item.type] || item.type}
+          ${escapeHtml(
+            TYPE_LABELS[item.type] ||
+            item.type
+          )}
         </span>
 
-        <h3>${escapeHtml(item.title)}</h3>
+        <h3>
+          ${escapeHtml(item.title)}
+        </h3>
 
-<p>
-  ${escapeHtml(
-    [item.year, secondaryLine(item)]
-      .filter(Boolean)
-      .join(' · ')
-  )}
-</p>
+        <p>
+          ${escapeHtml(
+            metaLine(item)
+          )}
+        </p>
 
-${
-  genresLine(item)
-    ? `<p class="card__genres">${escapeHtml(genresLine(item))}</p>`
-    : ''
-}
+        ${
+          genresLine(item)
+            ? `
+              <p class="card__genres">
+                ${escapeHtml(
+                  genresLine(item)
+                )}
+              </p>
+            `
+            : ''
+        }
 
-${note}
-
+        ${note}
       </div>
 
       <div class="library-list-item__status">
         ${
           item.status
-            ? `<span class="card__status card__status--${item.status}">
-                ${STATUS_LABELS[item.status] || item.status}
-              </span>`
+            ? `
+              <span
+                class="card__status card__status--${item.status}"
+              >
+                ${escapeHtml(
+                  STATUS_LABELS[item.status] ||
+                  item.status
+                )}
+              </span>
+            `
             : ''
         }
       </div>
 
       <div class="library-list-item__ratings">
-        ${externalRating}
-        ${userRating}
+        ${
+          ratingMarkup(
+            item.rating,
+            'library-list-item__rating',
+            'БД'
+          ) ||
+          '<span class="library-list-item__rating library-list-item__empty">—</span>'
+        }
+
+        ${
+          ratingMarkup(
+            item.userRating,
+            'library-list-item__rating library-list-item__rating--user',
+            'Моя'
+          ) ||
+          '<span class="library-list-item__rating library-list-item__empty">—</span>'
+        }
       </div>
     `;
 
-    const activate = () => onSelect && onSelect(item);
-
-    row.addEventListener('click', activate);
-
-    row.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        activate();
-      }
-    });
+    activateOnKeyboard(
+      row,
+      () =>
+        onSelect?.(item)
+    );
 
     fragment.appendChild(row);
   });
@@ -154,13 +350,230 @@ ${note}
   container.appendChild(fragment);
 }
 
+
+function renderCard(
+  item,
+  onSelect
+) {
+  const card =
+    document.createElement('article');
+
+  card.className = 'card';
+  card.tabIndex = 0;
+
+  const genres =
+    genresLine(item);
+
+  card.innerHTML = `
+    ${posterMarkup(item)}
+
+    <div class="card__body">
+      <span class="card__type">
+        ${escapeHtml(
+          TYPE_LABELS[item.type] ||
+          item.type
+        )}
+      </span>
+
+      <h3 class="card__title">
+        ${escapeHtml(item.title)}
+      </h3>
+
+      <p class="card__meta">
+        ${escapeHtml(
+          metaLine(item)
+        )}
+      </p>
+
+      ${
+        genres
+          ? `
+            <p class="card__genres">
+              ${escapeHtml(genres)}
+            </p>
+          `
+          : ''
+      }
+
+      ${
+        item.status
+          ? `
+            <span
+              class="card__status card__status--${item.status}"
+            >
+              ${escapeHtml(
+                STATUS_LABELS[item.status] ||
+                item.status
+              )}
+            </span>
+          `
+          : ''
+      }
+
+      ${ratingMarkup(
+        item.rating,
+        'card__rating',
+        'Оценка'
+      )}
+
+      ${ratingMarkup(
+        item.userRating,
+        'card__user-rating',
+        'Моя оценка'
+      )}
+
+      ${
+        item.note?.trim()
+          ? `
+            <p class="card__note">
+              ${escapeHtml(
+                item.note.trim()
+              )}
+            </p>
+          `
+          : ''
+      }
+    </div>
+  `;
+
+  activateOnKeyboard(
+    card,
+    () => onSelect?.(item)
+  );
+
+  return card;
+}
+
+
+export function renderEmptyState(
+  container,
+  message
+) {
+  container.innerHTML =
+    `<p class="empty-state">${
+      escapeHtml(message)
+    }</p>`;
+}
+
+
+export function setActiveFilter(
+  container,
+  type
+) {
+  container
+    .querySelectorAll('.type-filter')
+    .forEach(button =>
+      button.classList.toggle(
+        'is-active',
+        button.dataset.type === type
+      )
+    );
+}
+
+
+// =========================================================
+// STATS
+// =========================================================
+
+export function renderStats(
+  container,
+  items
+) {
+  const stats = {
+    total: items.length,
+
+    completed: 0,
+    watching: 0,
+    planned: 0,
+    on_hold: 0,
+    dropped: 0,
+
+    movie: 0,
+    series: 0,
+    anime: 0,
+    game: 0,
+  };
+
+  items.forEach(item => {
+    if (
+      stats[item.status] !==
+      undefined
+    ) {
+      stats[item.status]++;
+    }
+
+    if (
+      stats[item.type] !==
+      undefined
+    ) {
+      stats[item.type]++;
+    }
+  });
+
+  const cards = [
+    ['total', 'Всего', true],
+    ['completed', 'Завершено'],
+    ['watching', 'Смотрю'],
+    ['planned', 'Запланировано'],
+    ['on_hold', 'На паузе'],
+    ['dropped', 'Дропнуто'],
+    ['movie', 'Фильмы', false, true],
+    ['series', 'Сериалы', false, true],
+    ['anime', 'Аниме', false, true],
+    ['game', 'Игры', false, true],
+  ];
+
+  container.innerHTML =
+    cards
+      .map(
+        ([
+          key,
+          label,
+          main = false,
+          type = false,
+        ]) => `
+          <div
+            class="stats-card${
+              main
+                ? ' stats-card--main'
+                : ''
+            }${
+              type
+                ? ' stats-card--type'
+                : ''
+            }"
+          >
+            <strong>
+              ${stats[key]}
+            </strong>
+
+            <span>
+              ${label}
+            </span>
+          </div>
+        `
+      )
+      .join('');
+}
+
+
+// =========================================================
+// RANDOM
+// =========================================================
+
 export function openRandomChoice(
   overlayEl,
   modalEl,
   item,
-  { onOpen, onAgain } = {}
+  {
+    onOpen,
+    onAgain,
+  } = {}
 ) {
-  modalEl.classList.add('modal--recommendation');
+  modalEl.classList.add(
+    'modal--recommendation'
+  );
+
   modalEl.innerHTML = `
     <button
       class="modal__close"
@@ -172,28 +585,42 @@ export function openRandomChoice(
     </button>
 
     <div class="recommendation-card">
-
       <p class="random-choice__eyebrow">
         А что если посмотреть это?
       </p>
 
       ${
         item.poster
-          ? `<img
+          ? `
+            <img
               class="random-choice__poster"
               src="${item.poster}"
-              alt="${escapeHtml(item.title)}"
-            />`
-          : `<div class="random-choice__poster random-choice__poster--placeholder">
-              ${escapeHtml((item.title || '?')[0])}
-            </div>`
+              alt="${escapeHtml(
+                item.title
+              )}"
+            >
+          `
+          : `
+            <div
+              class="random-choice__poster random-choice__poster--placeholder"
+            >
+              ${escapeHtml(
+                (item.title || '?')[0]
+              )}
+            </div>
+          `
       }
 
       <span class="card__type">
-        ${TYPE_LABELS[item.type] || item.type}
+        ${escapeHtml(
+          TYPE_LABELS[item.type] ||
+          item.type
+        )}
       </span>
 
-      <h2>${escapeHtml(item.title)}</h2>
+      <h2>
+        ${escapeHtml(item.title)}
+      </h2>
 
       <p class="random-choice__meta">
         ${escapeHtml(
@@ -201,8 +628,11 @@ export function openRandomChoice(
             item.year,
             secondaryLine(item),
             item.status
-              ? STATUS_LABELS[item.status] || item.status
-              : ''
+              ? STATUS_LABELS[
+                  item.status
+                ] ||
+                item.status
+              : '',
           ]
             .filter(Boolean)
             .join(' · ')
@@ -210,7 +640,6 @@ export function openRandomChoice(
       </p>
 
       <div class="random-choice__actions">
-
         <button
           type="button"
           class="button button--primary"
@@ -226,185 +655,56 @@ export function openRandomChoice(
         >
           Ещё раз
         </button>
-
       </div>
-
     </div>
   `;
 
-const close = () => {
-  overlayEl.hidden = true;
-  modalEl.innerHTML = '';
-  modalEl.classList.remove('modal--recommendation');
-};
+  const close = () => {
+    overlayEl.hidden = true;
+    modalEl.innerHTML = '';
+    modalEl.classList.remove(
+      'modal--recommendation'
+    );
+  };
 
   modalEl
-    .querySelector('[data-action="close"]')
-    .addEventListener('click', close);
+    .querySelector(
+      '[data-action="close"]'
+    )
+    .addEventListener(
+      'click',
+      close
+    );
 
   modalEl
-    .querySelector('[data-action="open"]')
-    .addEventListener('click', () => {
-      close();
-      onOpen && onOpen(item);
-    });
+    .querySelector(
+      '[data-action="open"]'
+    )
+    .addEventListener(
+      'click',
+      () => {
+        close();
+        onOpen?.(item);
+      }
+    );
 
   modalEl
-    .querySelector('[data-action="again"]')
-    .addEventListener('click', () => {
-      onAgain && onAgain();
-    });
+    .querySelector(
+      '[data-action="again"]'
+    )
+    .addEventListener(
+      'click',
+      () => onAgain?.()
+    );
 
   overlayEl.hidden = false;
 }
 
-export function renderEmptyState(container, message) {
-  container.innerHTML = `<p class="empty-state">${escapeHtml(message)}</p>`;
-}
-export function renderStats(container, items) {
-  const stats = {
-    total: items.length,
-    completed: 0,
-    watching: 0,
-    planned: 0,
-    on_hold: 0,
-    dropped: 0,
 
-    movie: 0,
-    series: 0,
-    anime: 0,
-    game: 0,
-  };
+// =========================================================
+// DETAIL MODAL
+// =========================================================
 
-  items.forEach((item) => {
-    if (stats[item.status] !== undefined) {
-      stats[item.status] += 1;
-    }
-
-    if (stats[item.type] !== undefined) {
-      stats[item.type] += 1;
-    }
-  });
-
-  container.innerHTML = `
-    <div class="stats-card stats-card--main">
-      <strong>${stats.total}</strong>
-      <span>Всего</span>
-    </div>
-
-    <div class="stats-card">
-      <strong>${stats.completed}</strong>
-      <span>Завершено</span>
-    </div>
-
-    <div class="stats-card">
-      <strong>${stats.watching}</strong>
-      <span>Смотрю</span>
-    </div>
-
-    <div class="stats-card">
-      <strong>${stats.planned}</strong>
-      <span>Запланировано</span>
-    </div>
-
-    <div class="stats-card">
-      <strong>${stats.on_hold}</strong>
-      <span>На паузе</span>
-    </div>
-
-    <div class="stats-card">
-      <strong>${stats.dropped}</strong>
-      <span>Дропнуто</span>
-    </div>
-
-    <div class="stats-card stats-card--type">
-      <strong>${stats.movie}</strong>
-      <span>Фильмы</span>
-    </div>
-
-    <div class="stats-card stats-card--type">
-      <strong>${stats.series}</strong>
-      <span>Сериалы</span>
-    </div>
-
-    <div class="stats-card stats-card--type">
-      <strong>${stats.anime}</strong>
-      <span>Аниме</span>
-    </div>
-
-    <div class="stats-card stats-card--type">
-      <strong>${stats.game}</strong>
-      <span>Игры</span>
-    </div>
-  `;
-}
-
-function renderCard(item, onSelect) {
-  const card = document.createElement('article');
-  card.className = 'card';
-  card.tabIndex = 0;
-
-  const poster = item.poster
-    ? `<img class="card__poster" src="${item.poster}" alt="${escapeHtml(item.title)}" loading="lazy" />`
-    : `<div class="card__poster card__poster--placeholder">${escapeHtml((item.title || '?')[0])}</div>`;
-
-    const externalRating = item.rating != null
-  ? `<span class="card__rating">★ ${item.rating} <small>Оценка</small></span>`
-  : '';
-
-const userRating = item.userRating != null
-  ? `<span class="card__user-rating">★ ${item.userRating} <small>Моя оценка</small></span>`
-  : '';
-
-const note = item.note?.trim()
-  ? `<p class="card__note">${escapeHtml(item.note.trim())}</p>`
-  : '';
-
-
-  card.innerHTML = `
-    ${poster}
-    <div class="card__body">
-      <span class="card__type">${TYPE_LABELS[item.type] || item.type}</span>
-      <h3 class="card__title">${escapeHtml(item.title)}</h3>
-      <p class="card__meta">
-  ${escapeHtml(
-    [item.year, secondaryLine(item)]
-      .filter(Boolean)
-      .join(' · ')
-  )}
-</p>
-
-${
-  genresLine(item)
-    ? `<p class="card__genres">${escapeHtml(genresLine(item))}</p>`
-    : ''
-}
-     ${item.status ? `<span class="card__status card__status--${item.status}">${STATUS_LABELS[item.status] || item.status}</span>` : ''}
-      ${externalRating}
-      ${userRating}
-      ${note}
-    </div>
-  `;
-
-  const activate = () => onSelect && onSelect(item);
-  card.addEventListener('click', activate);
-  card.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      activate();
-    }
-  });
-
-  return card;
-}
-
-export function setActiveFilter(container, type) {
-  container.querySelectorAll('.type-filter').forEach((btn) => {
-    btn.classList.toggle('is-active', btn.dataset.type === type);
-  });
-}
-
-// item = Unified Media Item, record = User Record or null (not yet in library)
 export function openModal(
   overlayEl,
   modalEl,
@@ -417,34 +717,20 @@ export function openModal(
     onOpenItem,
   }
 ) {
-
-    modalEl.classList.remove('modal--recommendation');
+  modalEl.classList.remove(
+    'modal--recommendation'
+  );
 
   const inLibrary =
     Boolean(record);
 
+  const reyohohoUrl =
+    item.title
+      ? `https://dav2010id.github.io/reyohoho/#search=${encodeURIComponent(
+          item.title
+        )}`
+      : 'https://dav2010id.github.io/reyohoho/';
 
- const buildReyohohoUrl = () => {
-  const baseUrl =
-    'https://dav2010id.github.io/reyohoho/';
-
-  if (!item.title) {
-    return baseUrl;
-  }
-
-  return (
-    baseUrl +
-    '#search=' +
-    encodeURIComponent(item.title)
-  );
-};
-
-const reyohohoUrl =
-  buildReyohohoUrl();
-
-  // =====================================================
-  // HELPERS
-  // =====================================================
 
   const formatRuntime =
     minutes => {
@@ -453,9 +739,7 @@ const reyohohoUrl =
       }
 
       const hours =
-        Math.floor(
-          minutes / 60
-        );
+        Math.floor(minutes / 60);
 
       const mins =
         minutes % 60;
@@ -472,34 +756,31 @@ const reyohohoUrl =
     };
 
 
-  const renderGenres =
-    () => {
-      if (
-        !Array.isArray(
-          item.genres
-        ) ||
-        !item.genres.length
-      ) {
-        return '';
-      }
+  const renderGenres = () => {
+    if (
+      !Array.isArray(item.genres) ||
+      !item.genres.length
+    ) {
+      return '';
+    }
 
-      return `
-        <div class="rich-modal__genres">
-          ${item.genres
-            .map(
-              genre =>
-                `<span class="rich-modal__genre">
-                  ${escapeHtml(genre)}
-                </span>`
-            )
-            .join('')}
-        </div>
-      `;
-    };
+    return `
+      <div class="rich-modal__genres">
+        ${item.genres
+          .map(
+            genre => `
+              <span class="rich-modal__genre">
+                ${escapeHtml(genre)}
+              </span>
+            `
+          )
+          .join('')}
+      </div>
+    `;
+  };
 
 
-  const renderRating =
-  (
+  const renderModalRating = (
     value,
     label,
     className = ''
@@ -513,7 +794,9 @@ const reyohohoUrl =
     }
 
     return `
-      <div class="rich-modal__rating ${className}">
+      <div
+        class="rich-modal__rating ${className}"
+      >
         <strong>
           ★ ${escapeHtml(value)}
         </strong>
@@ -525,232 +808,186 @@ const reyohohoUrl =
     `;
   };
 
-  const renderFacts =
-    () => {
-      const facts = [];
 
-      if (item.countries?.length) {
-        facts.push({
-          label: 'Страна',
-          value:
-            item.countries.join(', '),
-        });
-      }
+  const renderFacts = () => {
+    const facts = [];
 
-      if (item.language) {
-        facts.push({
-          label: 'Язык',
-          value:
-            item.language,
-        });
-      }
+    if (item.countries?.length) {
+      facts.push([
+        'Страна',
+        item.countries.join(', '),
+      ]);
+    }
 
-      if (
-        item.budget &&
-        item.type === 'movie'
-      ) {
-        facts.push({
-          label: 'Бюджет',
-          value:
-            item.budget,
-        });
-      }
-
-      if (
-        item.revenue &&
-        item.type === 'movie'
-      ) {
-        facts.push({
-          label: 'Сборы',
-          value:
-            item.revenue,
-        });
-      }
-
-      if (item.director) {
-        facts.push({
-          label: 'Режиссёр',
-          value:
-            item.director,
-        });
-      }
-
-      if (
-        Array.isArray(
-          item.writers
-        ) &&
-        item.writers.length
-      ) {
-        facts.push({
-          label: 'Сценарий',
-          value:
-            item.writers.join(', '),
-        });
-      }
-
-      if (
-        item.type === 'series' &&
-        item.episodes
-      ) {
-        facts.push({
-          label: 'Эпизодов',
-          value:
-            item.episodes,
-        });
-      }
-
-      if (!facts.length) {
-        return '';
-      }
-
-      return `
-        <section class="rich-modal__section">
-          <h3>Информация</h3>
-
-          <div class="rich-modal__facts">
-            ${facts
-              .map(
-                fact => `
-                  <div class="rich-modal__fact">
-                    <span>
-                      ${escapeHtml(
-                        fact.label
-                      )}
-                    </span>
-
-                    <strong>
-                      ${escapeHtml(
-                        String(
-                          fact.value
-                        )
-                      )}
-                    </strong>
-                  </div>
-                `
-              )
-              .join('')}
-          </div>
-        </section>
-      `;
-    };
-
-
-  const renderCast =
-    () => {
-      if (
-        !Array.isArray(
-          item.cast
-        ) ||
-        !item.cast.length
-      ) {
-        return '';
-      }
-
-      return `
-        <section class="rich-modal__section">
-          <h3>В ролях</h3>
-
-          <div class="rich-modal__people">
-            ${item.cast
-              .map(
-                person => `
-                  <div class="rich-modal__person">
-
-                    ${
-                      person.photo
-                        ? `
-                          <img
-                            src="${person.photo}"
-                            alt="${escapeHtml(
-                              person.name
-                            )}"
-                            loading="lazy"
-                          >
-                        `
-                        : `
-                          <div class="rich-modal__person-placeholder">
-                            ●
-                          </div>
-                        `
-                    }
-
-                    <strong>
-                      ${escapeHtml(
-                        person.name
-                      )}
-                    </strong>
-
-                    ${
-                      person.character
-                        ? `
-                          <span>
-                            ${escapeHtml(
-                              person.character
-                            )}
-                          </span>
-                        `
-                        : ''
-                    }
-
-                  </div>
-                `
-              )
-              .join('')}
-          </div>
-        </section>
-      `;
-    };
-
-
-  const renderProviders =
-    () => {
-      if (
-        !Array.isArray(
-          item.watchProviders
-        ) ||
-        !item.watchProviders.length
-      ) {
-        return '';
-      }
-
-      return `
-
-      `;
-    };
-
-    // =====================================================
-// СВЯЗАННЫЕ ФИЛЬМЫ
-// =====================================================
-
-const renderRelated =
-  () => {
+    if (item.language) {
+      facts.push([
+        'Язык',
+        item.language,
+      ]);
+    }
 
     if (
-      !Array.isArray(
-        item.related
-      ) ||
-      !item.related.length
+      item.budget &&
+      item.type === 'movie'
+    ) {
+      facts.push([
+        'Бюджет',
+        item.budget,
+      ]);
+    }
+
+    if (
+      item.revenue &&
+      item.type === 'movie'
+    ) {
+      facts.push([
+        'Сборы',
+        item.revenue,
+      ]);
+    }
+
+    if (item.director) {
+      facts.push([
+        'Режиссёр',
+        item.director,
+      ]);
+    }
+
+    if (
+      Array.isArray(item.writers) &&
+      item.writers.length
+    ) {
+      facts.push([
+        'Сценарий',
+        item.writers.join(', '),
+      ]);
+    }
+
+    if (
+      item.type === 'series' &&
+      item.episodes
+    ) {
+      facts.push([
+        'Эпизодов',
+        item.episodes,
+      ]);
+    }
+
+    if (!facts.length) {
+      return '';
+    }
+
+    return `
+      <section class="rich-modal__section">
+        <h3>Информация</h3>
+
+        <div class="rich-modal__facts">
+          ${facts
+            .map(
+              ([label, value]) => `
+                <div class="rich-modal__fact">
+                  <span>
+                    ${escapeHtml(label)}
+                  </span>
+
+                  <strong>
+                    ${escapeHtml(
+                      String(value)
+                    )}
+                  </strong>
+                </div>
+              `
+            )
+            .join('')}
+        </div>
+      </section>
+    `;
+  };
+
+
+  const renderCast = () => {
+    if (
+      !Array.isArray(item.cast) ||
+      !item.cast.length
     ) {
       return '';
     }
 
     return `
-      <section
-        class="rich-modal__section"
-      >
+      <section class="rich-modal__section">
+        <h3>В ролях</h3>
 
+        <div class="rich-modal__people">
+          ${item.cast
+            .map(
+              person => `
+                <div class="rich-modal__person">
+                  ${
+                    person.photo
+                      ? `
+                        <img
+                          src="${person.photo}"
+                          alt="${escapeHtml(
+                            person.name
+                          )}"
+                          loading="lazy"
+                        >
+                      `
+                      : `
+                        <div class="rich-modal__person-placeholder">
+                          ●
+                        </div>
+                      `
+                  }
+
+                  <strong>
+                    ${escapeHtml(
+                      person.name
+                    )}
+                  </strong>
+
+                  ${
+                    person.character
+                      ? `
+                        <span>
+                          ${escapeHtml(
+                            person.character
+                          )}
+                        </span>
+                      `
+                      : ''
+                  }
+                </div>
+              `
+            )
+            .join('')}
+        </div>
+      </section>
+    `;
+  };
+
+
+  const renderRelatedGroup = (
+    title,
+    items
+  ) => {
+    if (
+      !Array.isArray(items) ||
+      !items.length
+    ) {
+      return '';
+    }
+
+    return `
+      <section class="rich-modal__section">
         <h3>
-          Связанные фильмы
+          ${escapeHtml(title)}
         </h3>
 
-        <div
-          class="rich-modal__similar"
-        >
-
-          ${item.related
+        <div class="rich-modal__similar">
+          ${items
             .map(
               related => `
-
                 <div
                   class="rich-modal__similar-card"
                   data-similar-id="${escapeHtml(
@@ -760,8 +997,7 @@ const renderRelated =
                   )}"
                   data-similar-provider="${escapeHtml(
                     String(
-                      related.provider ||
-                      ''
+                      related.provider || ''
                     )
                   )}"
                   tabindex="0"
@@ -770,7 +1006,6 @@ const renderRelated =
                     related.title
                   )}"
                 >
-
                   ${
                     related.poster
                       ? `
@@ -783,9 +1018,7 @@ const renderRelated =
                         >
                       `
                       : `
-                        <div
-                          class="rich-modal__similar-placeholder"
-                        >
+                        <div class="rich-modal__similar-placeholder">
                           ${escapeHtml(
                             (
                               related.title ||
@@ -808,130 +1041,21 @@ const renderRelated =
                         related.year,
                         related.rating
                           ? `★ ${related.rating}`
-                          : ''
+                          : '',
                       ]
                         .filter(Boolean)
                         .join(' · ')
                     )}
                   </span>
-
                 </div>
-
               `
             )
             .join('')}
-
         </div>
-
       </section>
     `;
   };
 
-  
-
-const renderSimilar =
-  () => {
-
-    if (
-      !Array.isArray(
-        item.similar
-      ) ||
-      !item.similar.length
-    ) {
-      return '';
-    }
-
-    return `
-      <section class="rich-modal__section">
-
-        <h3>
-          Похожие
-        </h3>
-
-        <div class="rich-modal__similar">
-
-          ${item.similar
-            .map(
-              similar => `
-
-                <div
-                  class="rich-modal__similar-card"
-                  data-similar-id="${escapeHtml(
-                    String(
-                      similar.id
-                    )
-                  )}"
-                  data-similar-provider="${escapeHtml(
-                    String(
-                      similar.provider || ''
-                    )
-                  )}"
-                  tabindex="0"
-                  role="button"
-                  aria-label="Открыть ${escapeHtml(
-                    similar.title
-                  )}"
-                >
-
-                  ${
-                    similar.poster
-                      ? `
-                        <img
-                          src="${similar.poster}"
-                          alt="${escapeHtml(
-                            similar.title
-                          )}"
-                          loading="lazy"
-                        >
-                      `
-                      : `
-                        <div
-                          class="rich-modal__similar-placeholder"
-                        >
-                          ${escapeHtml(
-                            (
-                              similar.title ||
-                              '?'
-                            )[0]
-                          )}
-                        </div>
-                      `
-                  }
-
-                  <strong>
-                    ${escapeHtml(
-                      similar.title
-                    )}
-                  </strong>
-
-                  <span>
-                    ${escapeHtml(
-                      [
-                        similar.year,
-                        similar.rating
-                          ? `★ ${similar.rating}`
-                          : ''
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')
-                    )}
-                  </span>
-
-                </div>
-
-              `
-            )
-            .join('')}
-
-        </div>
-
-      </section>
-    `;
-  };
-
-  // =====================================================
-  // HERO
-  // =====================================================
 
   const title =
     escapeHtml(
@@ -940,24 +1064,19 @@ const renderSimilar =
 
   const originalTitle =
     item.originalTitle &&
-    item.originalTitle !==
-      item.title
+    item.originalTitle !== item.title
       ? escapeHtml(
           item.originalTitle
         )
       : '';
 
-
   const runtime =
     item.type === 'movie'
-      ? formatRuntime(
-          item.runtime
-        )
+      ? formatRuntime(item.runtime)
       : item.type === 'series' &&
           item.episodes
         ? `${item.episodes} эп.`
         : '';
-
 
   const heroMeta =
     [
@@ -967,27 +1086,14 @@ const renderSimilar =
       .filter(Boolean)
       .join(' · ');
 
-
   const poster =
-    item.poster
-      ? `
-        <img
-          class="rich-modal__poster"
-          src="${item.poster}"
-          alt="${title}"
-        >
-      `
-      : `
-        <div class="rich-modal__poster rich-modal__poster--placeholder">
-          ${escapeHtml(
-            (item.title || '?')[0]
-          )}
-        </div>
-      `;
+    posterMarkup(
+      item,
+      'rich-modal__poster'
+    );
 
 
   modalEl.innerHTML = `
-
     <button
       class="modal__close rich-modal__close"
       type="button"
@@ -997,9 +1103,7 @@ const renderSimilar =
       &times;
     </button>
 
-
     <section class="rich-modal__hero">
-
       ${
         item.backdrop
           ? `
@@ -1012,19 +1116,14 @@ const renderSimilar =
           : ''
       }
 
-
       <div class="rich-modal__hero-overlay"></div>
 
-
       <div class="rich-modal__hero-content">
-
         <div class="rich-modal__poster-wrap">
           ${poster}
         </div>
 
-
         <div class="rich-modal__hero-info">
-
           <span class="rich-modal__type">
             ${escapeHtml(
               TYPE_LABELS[item.type] ||
@@ -1032,11 +1131,7 @@ const renderSimilar =
             )}
           </span>
 
-
-          <h2>
-            ${title}
-          </h2>
-
+          <h2>${title}</h2>
 
           ${
             originalTitle
@@ -1048,136 +1143,108 @@ const renderSimilar =
               : ''
           }
 
-
           ${
             heroMeta
               ? `
                 <p class="rich-modal__meta">
-                  ${escapeHtml(
-                    heroMeta
-                  )}
+                  ${escapeHtml(heroMeta)}
                 </p>
               `
               : ''
           }
 
-
           <div class="rich-modal__ratings">
-
-            ${renderRating(
+            ${renderModalRating(
               item.rating,
               'База данных'
             )}
 
-            ${renderRating(
+            ${renderModalRating(
               record?.userRating,
               'Моя оценка',
               'rich-modal__rating--user'
             )}
-
           </div>
-          ${
-  item.type === 'movie' ||
-  item.type === 'series' ||
-  item.type === 'anime'
-    ? `
-      <a
-        class="button button--primary rich-modal__watch-button"
-        href="${reyohohoUrl}"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Смотреть ➤
-      </a>
-    `
-    : ''
-}
 
+          ${
+            [
+              'movie',
+              'series',
+              'anime',
+            ].includes(item.type)
+              ? `
+                <a
+                  class="button button--primary rich-modal__watch-button"
+                  href="${reyohohoUrl}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Смотреть ➤
+                </a>
+              `
+              : ''
+          }
 
           ${renderGenres()}
-
         </div>
-
       </div>
-
     </section>
 
-
     <div class="rich-modal__body">
-
-
-
       ${
         item.description
           ? `
-            <section class="rich-modal__section rich-modal__section--description">
-
-              <h3>
-                О произведении
-              </h3>
+            <section
+              class="rich-modal__section rich-modal__section--description"
+            >
+              <h3>О произведении</h3>
 
               <p>
                 ${escapeHtml(
                   item.description
                 )}
               </p>
-
             </section>
           `
           : ''
       }
 
-
       ${renderFacts()}
-
-
       ${renderCast()}
 
-
-
-
-
-      <section class="rich-modal__section rich-modal__library">
-
+      <section
+        class="rich-modal__section rich-modal__library"
+      >
         <div class="rich-modal__library-header">
-
           <div>
-            <h3>
-              Моя библиотека
-            </h3>
+            <h3>Моя библиотека</h3>
 
             ${
               inLibrary &&
               record?.status
                 ? `
                   <span class="rich-modal__library-status">
-                    ${
+                    ${escapeHtml(
                       STATUS_LABELS[
                         record.status
                       ] ||
                       record.status
-                    }
+                    )}
                   </span>
                 `
                 : ''
             }
-
           </div>
-
         </div>
-
 
         <form
           class="modal__form"
           id="modal-form"
         >
-
           <label>
-
             Статус
 
             <select name="status">
-
               ${Object.entries(
                 STATUS_LABELS
               )
@@ -1186,8 +1253,7 @@ const renderSimilar =
                     <option
                       value="${value}"
                       ${
-                        record?.status ===
-                        value
+                        record?.status === value
                           ? 'selected'
                           : ''
                       }
@@ -1197,63 +1263,49 @@ const renderSimilar =
                   `
                 )
                 .join('')}
-
             </select>
-
           </label>
 
-
           <fieldset class="rating-field">
-
-            <legend>
-              Моя оценка
-            </legend>
-
+            <legend>Моя оценка</legend>
 
             <div
               class="star-rating"
               role="radiogroup"
               aria-label="Моя оценка от 1 до 10"
             >
-
               ${Array.from(
                 { length: 10 },
                 (_, index) => {
                   const value =
                     index + 1;
 
-                const selectedRating =
-                  Number(
-                    record?.userRating
-                  );
+                  const selected =
+                    Number(
+                      record?.userRating
+                    );
 
-                const active =
-                  selectedRating >= value;
-
-                const checked =
-                  selectedRating === value;
-
-                return `
-                  <button
-                    type="button"
-                    class="star-rating__star${
-                      active
-                        ? ' is-active'
-                        : ''
-                    }"
-                    data-rating="${value}"
-                    role="radio"
-                    aria-checked="${checked}"
-                    aria-label="${value} из 10"
-                  >
-                    ★
-                  </button>
-                `;
+                  return `
+                    <button
+                      type="button"
+                      class="star-rating__star${
+                        selected >= value
+                          ? ' is-active'
+                          : ''
+                      }"
+                      data-rating="${value}"
+                      role="radio"
+                      aria-checked="${
+                        selected === value
+                      }"
+                      aria-label="${value} из 10"
+                    >
+                      ★
+                    </button>
+                  `;
                 }
               ).join('')}
-
             </div>
-
 
             <input
               type="hidden"
@@ -1262,12 +1314,9 @@ const renderSimilar =
                 record?.userRating ?? ''
               }"
             >
-
           </fieldset>
 
-
           <label>
-
             Заметка
 
             <textarea
@@ -1276,12 +1325,9 @@ const renderSimilar =
             >${escapeHtml(
               record?.note ?? ''
             )}</textarea>
-
           </label>
 
-
           <div class="modal__actions">
-
             <button
               type="submit"
               class="button button--primary"
@@ -1292,7 +1338,6 @@ const renderSimilar =
                   : 'Добавить в библиотеку'
               }
             </button>
-
 
             ${
               inLibrary
@@ -1307,116 +1352,290 @@ const renderSimilar =
                 `
                 : ''
             }
-
           </div>
-
         </form>
-
       </section>
 
+      ${renderRelatedGroup(
+        'Связанные фильмы',
+        item.related
+      )}
 
-      ${renderRelated()}
-${renderSimilar()}
-
+      ${renderRelatedGroup(
+        'Похожие',
+        item.similar
+      )}
     </div>
   `;
 
-// =====================================================
-// SIMILAR ITEMS
-// =====================================================
 
-modalEl
-  .querySelectorAll(
-    '[data-similar-id]'
-  )
-  .forEach(card => {
+  // =======================================================
+  // MODAL EVENTS
+  // =======================================================
 
-    const activate =
-      async () => {
+  const close = () => {
+    overlayEl.hidden = true;
+    modalEl.innerHTML = '';
+  };
 
-        if (
-          typeof onOpenItem !==
-          'function'
-        ) {
-          return;
-        }
 
-       const similarId =
-  card.dataset.similarId;
+  modalEl
+    .querySelector(
+      '[data-action="close"]'
+    )
+    .addEventListener(
+      'click',
+      close
+    );
 
-const similarProvider =
-  card.dataset.similarProvider;
 
-const sourceItems = [
-  ...(Array.isArray(
-    item.related
-  )
-    ? item.related
-    : []),
+  const handleOverlayClick =
+    event => {
+      if (
+        event.target ===
+        overlayEl
+      ) {
+        close();
+      }
+    };
 
-  ...(Array.isArray(
-    item.similar
-  )
-    ? item.similar
-    : []),
-];
 
-const similarItem =
-  sourceItems.find(
-    candidate =>
-      String(
-        candidate.id
-      ) === similarId &&
-      String(
-        candidate.provider || ''
-      ) ===
-        similarProvider
+  overlayEl.addEventListener(
+    'click',
+    handleOverlayClick
   );
 
-        if (!similarItem) {
+
+  modalEl
+    .querySelectorAll(
+      '[data-similar-id]'
+    )
+    .forEach(card => {
+      activateOnKeyboard(
+        card,
+        async () => {
+          if (
+            typeof onOpenItem !==
+            'function'
+          ) {
+            return;
+          }
+
+          const id =
+            card.dataset.similarId;
+
+          const provider =
+            card.dataset.similarProvider;
+
+          const source = [
+            ...(item.related || []),
+            ...(item.similar || []),
+          ];
+
+          const target =
+            source.find(
+              candidate =>
+                String(
+                  candidate.id
+                ) === id &&
+                String(
+                  candidate.provider || ''
+                ) === provider
+            );
+
+          if (!target) {
+            return;
+          }
+
+          await onOpenItem(target);
+
+          requestAnimationFrame(() => {
+            modalEl.scrollTop = 0;
+          });
+        }
+      );
+    });
+
+
+  // Rating
+
+  const ratingInput =
+    modalEl.querySelector(
+      'input[name="userRating"]'
+    );
+
+  const ratingStars =
+    modalEl.querySelectorAll(
+      '.star-rating__star'
+    );
+
+  ratingStars.forEach(star => {
+    star.addEventListener(
+      'click',
+      () => {
+        const rating =
+          Number(
+            star.dataset.rating
+          );
+
+        ratingInput.value =
+          rating;
+
+        ratingStars.forEach(
+          current => {
+            const value =
+              Number(
+                current.dataset.rating
+              );
+
+            current.classList.toggle(
+              'is-active',
+              value <= rating
+            );
+
+            current.setAttribute(
+              'aria-checked',
+              value === rating
+                ? 'true'
+                : 'false'
+            );
+          }
+        );
+      }
+    );
+  });
+
+
+  // Save
+
+  const form =
+    modalEl.querySelector(
+      '#modal-form'
+    );
+
+  let isSubmitting = false;
+
+  form.addEventListener(
+    'submit',
+    async event => {
+      event.preventDefault();
+
+      if (isSubmitting) {
+        return;
+      }
+
+      isSubmitting = true;
+
+      const submitButton =
+        form.querySelector(
+          'button[type="submit"]'
+        );
+
+      const originalText =
+        submitButton.textContent;
+
+      submitButton.disabled = true;
+
+      submitButton.textContent =
+        inLibrary
+          ? 'Сохраняем…'
+          : 'Добавляем…';
+
+      const data =
+        new FormData(form);
+
+      const changes = {
+        status:
+          data.get('status'),
+
+        userRating:
+          data.get('userRating')
+            ? Number(
+                data.get('userRating')
+              )
+            : null,
+
+        note:
+          String(
+            data.get('note') || ''
+          ).trim(),
+      };
+
+      try {
+        if (inLibrary) {
+          await onSave(changes);
           return;
         }
 
-        await onOpenItem(
-          similarItem
-        );
-         requestAnimationFrame(
-          () => {
-            modalEl.scrollTop = 0;
-          }
-        );
-      };
+        const success =
+          await onAdd(changes);
 
-
-    card.addEventListener(
-      'click',
-      activate
-    );
-
-
-    card.addEventListener(
-      'keydown',
-      event => {
-
-        if (
-          event.key === 'Enter' ||
-          event.key === ' '
-        ) {
-          event.preventDefault();
-
-          activate();
+        if (!success) {
+          return;
         }
 
+        close();
+
+        showToast(
+          `${
+            item.title || 'Контент'
+          } добавлен в библиотеку`,
+          'Контент добавлен'
+        );
+      } catch (error) {
+        console.error(
+          '[modal] submit failed:',
+          error
+        );
+      } finally {
+        isSubmitting = false;
+        submitButton.disabled = false;
+        submitButton.textContent =
+          originalText;
       }
+    }
+  );
+
+
+  // Remove
+
+  const removeButton =
+    modalEl.querySelector(
+      '[data-action="remove"]'
     );
 
-  });
+  removeButton?.addEventListener(
+    'click',
+    async () => {
+      if (isSubmitting) {
+        return;
+      }
 
-const showToast = (
+      isSubmitting = true;
+      removeButton.disabled = true;
+
+      try {
+        await onRemove();
+      } finally {
+        isSubmitting = false;
+        removeButton.disabled = false;
+      }
+    }
+  );
+
+
+  overlayEl.hidden = false;
+}
+
+
+// =========================================================
+// TOAST
+// =========================================================
+
+function showToast(
   message,
   title = 'Готово'
-) => {
-
+) {
   document
     .querySelector('.app-toast')
     ?.remove();
@@ -1441,7 +1660,6 @@ const showToast = (
     </span>
 
     <span class="app-toast__content">
-
       <strong>
         ${escapeHtml(title)}
       </strong>
@@ -1449,22 +1667,18 @@ const showToast = (
       <span>
         ${escapeHtml(message)}
       </span>
-
     </span>
   `;
 
-  document.body.appendChild(
-    toast
-  );
+  document.body.appendChild(toast);
 
-  requestAnimationFrame(() => {
+  requestAnimationFrame(() =>
     toast.classList.add(
       'is-visible'
-    );
-  });
+    )
+  );
 
   setTimeout(() => {
-
     toast.classList.remove(
       'is-visible'
     );
@@ -1473,280 +1687,5 @@ const showToast = (
       () => toast.remove(),
       220
     );
-
   }, 2600);
-};
-
-  // =====================================================
-  // CLOSE
-  // =====================================================
-
-  function handleOverlayClick(e) {
-    if (
-      e.target ===
-      overlayEl
-    ) {
-      close();
-    }
-  }
-
-
-  const close =
-    () => {
-      overlayEl.hidden =
-        true;
-
-      overlayEl.removeEventListener(
-        'click',
-        handleOverlayClick
-      );
-
-      modalEl.innerHTML =
-        '';
-    };
-
-
-  modalEl
-    .querySelector(
-      '[data-action="close"]'
-    )
-    .addEventListener(
-      'click',
-      close
-    );
-
-
-  overlayEl.addEventListener(
-    'click',
-    handleOverlayClick
-  );
-
-
-  // =====================================================
-  // RATING
-  // =====================================================
-
-  const ratingInput =
-    modalEl.querySelector(
-      'input[name="userRating"]'
-    );
-
-
-  const ratingStars =
-    modalEl.querySelectorAll(
-      '.star-rating__star'
-    );
-
-
-  ratingStars.forEach(
-    star => {
-      star.addEventListener(
-        'click',
-        () => {
-
-          const rating =
-            Number(
-              star.dataset.rating
-            );
-
-          ratingInput.value =
-            rating;
-
-
-          ratingStars.forEach(
-            current => {
-
-              const value =
-                Number(
-                  current.dataset.rating
-                );
-
-              current.classList.toggle(
-                'is-active',
-                value <= rating
-              );
-
-              current.setAttribute(
-                'aria-checked',
-                value === rating
-                  ? 'true'
-                  : 'false'
-              );
-            }
-          );
-        }
-      );
-    }
-  );
-
-let isSubmitting = false;
-  // =====================================================
-  // SAVE
-  // =====================================================
-
-  modalEl
-  .querySelector(
-    '#modal-form'
-  )
-  .addEventListener(
-    'submit',
-    async event => {
-
-      event.preventDefault();
-
-      if (isSubmitting) {
-        return;
-      }
-
-      isSubmitting = true;
-
-      const form = event.currentTarget;
-
-      const submitButton =
-        form.querySelector(
-          'button[type="submit"]'
-        );
-
-      if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.dataset.originalText =
-          submitButton.textContent;
-
-        if (!inLibrary) {
-          submitButton.textContent =
-            'Добавляем…';
-        } else {
-          submitButton.textContent =
-            'Сохраняем…';
-        }
-      }
-
-      const formData =
-        new FormData(form);
-
-      const changes = {
-        status:
-          formData.get(
-            'status'
-          ),
-
-        userRating:
-          formData.get(
-            'userRating'
-          )
-            ? Number(
-                formData.get(
-                  'userRating'
-                )
-              )
-            : null,
-
-        note:
-          String(
-            formData.get(
-              'note'
-            ) || ''
-          ).trim(),
-      };
-
-      try {
-
-        if (inLibrary) {
-
-          await onSave(
-            changes
-          );
-
-          isSubmitting = false;
-
-          if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.textContent =
-              submitButton.dataset.originalText ||
-              'Сохранить';
-          }
-
-          return;
-        }
-
-        const success =
-          await onAdd(
-            changes
-          );
-
-        if (!success) {
-          isSubmitting = false;
-
-          if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.textContent =
-              submitButton.dataset.originalText ||
-              'Добавить в библиотеку';
-          }
-
-          return;
-        }
-
-        const title =
-          item.title ||
-          'Контент';
-
-        close();
-
-        showToast(
-          `${title} добавлен в библиотеку`,
-          'Контент добавлен'
-        );
-
-      } catch (error) {
-
-        console.error(
-          '[modal] submit failed:',
-          error
-        );
-
-        isSubmitting = false;
-
-        if (submitButton) {
-          submitButton.disabled = false;
-          submitButton.textContent =
-            submitButton.dataset.originalText ||
-            (
-              inLibrary
-                ? 'Сохранить'
-                : 'Добавить в библиотеку'
-            );
-        }
-      }
-
-    }
-  );
-
-
-  // =====================================================
-  // REMOVE
-  // =====================================================
-
-  const removeButton =
-    modalEl.querySelector(
-      '[data-action="remove"]'
-    );
-
-
-  if (removeButton) {
-
-    removeButton.addEventListener(
-      'click',
-      async () => {
-
-        await onRemove();
-
-      }
-    );
-
-  }
-
-
-  overlayEl.hidden =
-    false;
 }

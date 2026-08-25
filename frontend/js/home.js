@@ -1,35 +1,35 @@
-// js/home.js
-// Page logic. This is the only file that knows about api.js, storage.js,
-// AND ui.js at the same time — it wires the search bar, type filters,
-// library grid, and detail modal together. It touches the DOM only to grab
-// element references; all rendering is delegated to ui.js.
+import {
+  searchAll,
+  enrichDetails,
+} from './api.js';
 
-import { searchAll, enrichDetails } from './api.js';
 import * as storage from './storage.js';
 import * as ui from './ui.js';
 
-const activeTypes = new Set();
 
-let currentView = 'library'; // 'library' | 'search'
+const PAGE_SIZE = 24;
 
-let currentSearchResults = [];
+const state = {
+  activeTypes: new Set(),
 
-let librarySort = 'added-desc';
-let libraryGenre = '';
-let libraryStatus = '';
-let libraryView = 'cards';
-const LIBRARY_PAGE_SIZE = 24;
+  view: 'library',
+  searchResults: [],
 
-let libraryPage = 1;
+  sort: 'added-desc',
+  genre: '',
+  status: '',
+  libraryView: 'cards',
+
+  page: 1,
+
+  searching: false,
+};
+
 
 let els = null;
-
+let loadingStartedAt = 0;
 let loadingTimer1 = null;
 let loadingTimer2 = null;
-
-let isSearching = false;
-
-let loadingStartedAt = 0;
 
 
 // =========================================================
@@ -37,7 +37,9 @@ let loadingStartedAt = 0;
 // =========================================================
 
 function getEls() {
-  if (els) return els;
+  if (els) {
+    return els;
+  }
 
   els = {
     searchForm:
@@ -62,21 +64,21 @@ function getEls() {
 
     libraryGrid:
       document.getElementById('library-grid'),
-      libraryPagination:
-  document.getElementById('library-pagination'),
+
+    libraryPagination:
+      document.getElementById('library-pagination'),
 
     libraryStats:
-  document.getElementById('library-stats'),
+      document.getElementById('library-stats'),
 
     librarySort:
       document.getElementById('library-sort'),
 
-
     libraryGenre:
       document.getElementById('library-genre'),
 
-      libraryStatuses:
-  document.getElementById('library-statuses'),
+    libraryStatuses:
+      document.getElementById('library-statuses'),
 
     randomPicker:
       document.getElementById('random-picker'),
@@ -84,15 +86,11 @@ function getEls() {
     viewSwitcher:
       document.querySelector('.view-switcher'),
 
-clearSearch:
-  document.getElementById(
-    'clear-search'
-  ),
+    clearSearch:
+      document.getElementById('clear-search'),
 
-homeButton:
-  document.getElementById(
-    'home-button'
-  ),
+    homeButton:
+      document.getElementById('home-button'),
 
     modalOverlay:
       document.getElementById('modal-overlay'),
@@ -123,60 +121,33 @@ function showLoading() {
     searchButton,
   } = getEls();
 
+  state.searching = true;
+  loadingStartedAt = Date.now();
 
-  isSearching = true;
-
-  loadingStartedAt =
-    Date.now();
-
-
-  loadingOverlay.hidden =
-    false;
-
-
-  searchInput.disabled =
-    true;
-
-
-  searchButton.disabled =
-    true;
+  loadingOverlay.hidden = false;
+  searchInput.disabled = true;
+  searchButton.disabled = true;
 
   searchButton.dataset.originalText =
     searchButton.textContent;
 
-  searchButton.textContent =
-    'Поиск...';
-
+  searchButton.textContent = 'Поиск...';
 
   loadingText.textContent =
     'Подбираем результаты из всех доступных баз данных';
 
+  clearTimeout(loadingTimer1);
+  clearTimeout(loadingTimer2);
 
-  clearTimeout(
-    loadingTimer1
-  );
+  loadingTimer1 = setTimeout(() => {
+    loadingText.textContent =
+      'Это может занять немного больше времени...';
+  }, 3000);
 
-  clearTimeout(
-    loadingTimer2
-  );
-
-
-  loadingTimer1 =
-    setTimeout(() => {
-
-      loadingText.textContent =
-        'Это может занять немного больше времени...';
-
-    }, 3000);
-
-
-  loadingTimer2 =
-    setTimeout(() => {
-
-      loadingText.textContent =
-        'Почти готово...';
-
-    }, 8000);
+  loadingTimer2 = setTimeout(() => {
+    loadingText.textContent =
+      'Почти готово...';
+  }, 8000);
 }
 
 
@@ -187,60 +158,31 @@ async function hideLoading() {
     searchButton,
   } = getEls();
 
-
-  const elapsed =
-    Date.now() -
-    loadingStartedAt;
-
-
   const remaining =
     Math.max(
       0,
-      1000 - elapsed
+      1000 -
+        (Date.now() - loadingStartedAt)
     );
 
-
-  if (remaining > 0) {
-
-    await new Promise(
-      resolve =>
-        setTimeout(
-          resolve,
-          remaining
-        )
+  if (remaining) {
+    await new Promise(resolve =>
+      setTimeout(resolve, remaining)
     );
   }
 
+  state.searching = false;
 
-  isSearching =
-    false;
+  clearTimeout(loadingTimer1);
+  clearTimeout(loadingTimer2);
 
-
-  clearTimeout(
-    loadingTimer1
-  );
-
-  clearTimeout(
-    loadingTimer2
-  );
-
-
-  loadingOverlay.hidden =
-    true;
-
-
-  searchInput.disabled =
-    false;
-
-
-  searchButton.disabled =
-    false;
-
+  loadingOverlay.hidden = true;
+  searchInput.disabled = false;
+  searchButton.disabled = false;
 
   searchButton.textContent =
     searchButton.dataset.originalText ||
     'Поиск';
-
 
   searchInput.focus();
 }
@@ -250,384 +192,381 @@ async function hideLoading() {
 // FILTERS
 // =========================================================
 
-function filterResults(items) {
-
-  if (activeTypes.size === 0) {
+function filterByType(items) {
+  if (!state.activeTypes.size) {
     return items;
   }
 
-
-  return items.filter(
-    item =>
-      activeTypes.has(
-        item.type
-      )
-  );
-}
-
-function filterLibraryByStatus(items) {
-  if (!libraryStatus) {
-    return items;
-  }
-
-  return items.filter(
-    (item) =>
-      item.status === libraryStatus
+  return items.filter(item =>
+    state.activeTypes.has(item.type)
   );
 }
 
 
-function filterLibraryByGenre(items) {
-  if (!libraryGenre) {
-    return items;
-  }
-
-  const target =
-    libraryGenre.toLocaleLowerCase('ru-RU');
-
-  return items.filter((item) => {
-    if (!Array.isArray(item.genres)) {
+function filterLibrary(items) {
+  return items.filter(item => {
+    if (
+      state.status &&
+      item.status !== state.status
+    ) {
       return false;
     }
 
-    return item.genres.some(
-      (genre) =>
+    if (!state.genre) {
+      return true;
+    }
+
+    const target =
+      state.genre.toLocaleLowerCase('ru-RU');
+
+    return Array.isArray(item.genres) &&
+      item.genres.some(genre =>
         String(genre || '')
           .trim()
           .toLocaleLowerCase('ru-RU') === target
-    );
+      );
   });
 }
 
+
 function updateGenreFilter(items) {
-  const {
-    libraryGenre: select,
-  } = getEls();
+  const select =
+    getEls().libraryGenre;
 
   if (!select) {
     return;
   }
 
-  const genresMap = new Map();
+  const genres = new Map();
 
-  items.forEach((item) => {
+  items.forEach(item => {
     if (!Array.isArray(item.genres)) {
       return;
     }
 
-    item.genres.forEach((genre) => {
-      const name = String(genre || '').trim();
+    item.genres.forEach(genre => {
+      const name =
+        String(genre || '').trim();
 
       if (!name) {
         return;
       }
 
-      const key = name.toLocaleLowerCase('ru-RU');
+      const key =
+        name.toLocaleLowerCase('ru-RU');
 
-      if (!genresMap.has(key)) {
-        genresMap.set(key, name);
+      if (!genres.has(key)) {
+        genres.set(key, name);
       }
     });
   });
 
-  const genres = [...genresMap.values()].sort(
-    (a, b) =>
+  const current =
+    state.genre.toLocaleLowerCase('ru-RU');
+
+  select.innerHTML =
+    '<option value="">Все жанры</option>';
+
+  [...genres.values()]
+    .sort((a, b) =>
       a.localeCompare(
         b,
         'ru-RU',
         { sensitivity: 'base' }
       )
-  );
+    )
+    .forEach(genre => {
+      const option =
+        document.createElement('option');
 
-  const currentValue = libraryGenre;
+      option.value = genre;
+      option.textContent = genre;
 
-  select.innerHTML = '';
-
-  const allOption =
-    document.createElement('option');
-
-  allOption.value = '';
-  allOption.textContent = 'Все жанры';
-
-  select.appendChild(allOption);
-
-  genres.forEach((genre) => {
-    const option =
-      document.createElement('option');
-
-    option.value = genre;
-    option.textContent = genre;
-
-    select.appendChild(option);
-  });
-
-  select.value =
-    genres.find(
-      (genre) =>
+      if (
         genre.toLocaleLowerCase('ru-RU') ===
-        String(currentValue || '').toLocaleLowerCase('ru-RU')
-    ) || '';
+        current
+      ) {
+        option.selected = true;
+      }
+
+      select.appendChild(option);
+    });
 }
 
-function sortLibrary(items) {
-  const sorted = [...items];
 
-  const compareStrings = (a, b) =>
+// =========================================================
+// SORT
+// =========================================================
+
+function sortLibrary(items) {
+  const result = [...items];
+
+  const stringCompare = (a, b) =>
     String(a || '').localeCompare(
       String(b || ''),
       'ru',
       { sensitivity: 'base' }
     );
 
-  const compareNumbers = (a, b) => {
-    const numA = Number(a);
-    const numB = Number(b);
+  const numberCompare = (a, b) => {
+    const left = Number(a);
+    const right = Number(b);
 
-    if (Number.isNaN(numA) && Number.isNaN(numB)) return 0;
-    if (Number.isNaN(numA)) return 1;
-    if (Number.isNaN(numB)) return -1;
+    if (
+      Number.isNaN(left) &&
+      Number.isNaN(right)
+    ) {
+      return 0;
+    }
 
-    return numA - numB;
+    if (Number.isNaN(left)) {
+      return 1;
+    }
+
+    if (Number.isNaN(right)) {
+      return -1;
+    }
+
+    return left - right;
   };
 
-  switch (librarySort) {
+  const dateCompare = (
+    a,
+    b
+  ) =>
+    new Date(a || 0) -
+    new Date(b || 0);
+
+  switch (state.sort) {
     case 'updated-desc':
-      return sorted.sort(
-        (a, b) =>
-          new Date(b.updatedAt || 0) -
-          new Date(a.updatedAt || 0)
+      return result.sort((a, b) =>
+        dateCompare(
+          b.updatedAt,
+          a.updatedAt
+        )
       );
 
     case 'title-asc':
-      return sorted.sort((a, b) =>
-        compareStrings(a.title, b.title)
+      return result.sort((a, b) =>
+        stringCompare(
+          a.title,
+          b.title
+        )
       );
 
     case 'title-desc':
-      return sorted.sort((a, b) =>
-        compareStrings(b.title, a.title)
+      return result.sort((a, b) =>
+        stringCompare(
+          b.title,
+          a.title
+        )
       );
 
     case 'year-desc':
-      return sorted.sort(
-        (a, b) =>
-          compareNumbers(b.year, a.year)
+      return result.sort((a, b) =>
+        numberCompare(
+          b.year,
+          a.year
+        )
       );
 
     case 'year-asc':
-      return sorted.sort(
-        (a, b) =>
-          compareNumbers(a.year, b.year)
+      return result.sort((a, b) =>
+        numberCompare(
+          a.year,
+          b.year
+        )
       );
 
     case 'user-rating-desc':
-      return sorted.sort(
-        (a, b) =>
-          compareNumbers(b.userRating, a.userRating)
+      return result.sort((a, b) =>
+        numberCompare(
+          b.userRating,
+          a.userRating
+        )
       );
 
     case 'external-rating-desc':
-      return sorted.sort(
-        (a, b) =>
-          compareNumbers(b.rating, a.rating)
+      return result.sort((a, b) =>
+        numberCompare(
+          b.rating,
+          a.rating
+        )
       );
 
     case 'added-desc':
     default:
-      return sorted.sort(
-        (a, b) =>
-          new Date(b.addedAt || 0) -
-          new Date(a.addedAt || 0)
+      return result.sort((a, b) =>
+        dateCompare(
+          b.addedAt,
+          a.addedAt
+        )
       );
   }
 }
 
+
 // =========================================================
-// LIBRARY
+// PAGINATION
 // =========================================================
 
-async function getLibraryView() {
-
-  try {
-
-    return await storage.getLibraryWithDetails();
-
-  } catch (error) {
-
-    console.error(
-      '[library] failed to load library:',
-      error
+function getPage(items) {
+  const totalPages =
+    Math.max(
+      1,
+      Math.ceil(
+        items.length / PAGE_SIZE
+      )
     );
 
-    return [];
-  }
-}
-
-
-
-function getLibraryPageItems(items) {
-  const totalPages = Math.max(
-    1,
-    Math.ceil(items.length / LIBRARY_PAGE_SIZE)
-  );
-
-  libraryPage = Math.min(
-    Math.max(1, libraryPage),
-    totalPages
-  );
+  state.page =
+    Math.min(
+      Math.max(1, state.page),
+      totalPages
+    );
 
   const start =
-    (libraryPage - 1) *
-    LIBRARY_PAGE_SIZE;
+    (state.page - 1) *
+    PAGE_SIZE;
 
   return {
     items: items.slice(
       start,
-      start + LIBRARY_PAGE_SIZE
+      start + PAGE_SIZE
     ),
+
     totalPages,
   };
 }
 
-function renderLibraryPagination(totalPages) {
-  const {
-    libraryPagination,
-  } = getEls();
 
-  if (!libraryPagination) {
+function createPageButton(
+  label,
+  page,
+  {
+    disabled = false,
+    active = false,
+    ariaLabel = '',
+  } = {}
+) {
+  const button =
+    document.createElement('button');
+
+  button.type = 'button';
+  button.className =
+    'library-pagination__button';
+
+  button.disabled = disabled;
+  button.textContent = label;
+
+  if (active) {
+    button.classList.add('is-active');
+    button.setAttribute(
+      'aria-current',
+      'page'
+    );
+  }
+
+  if (ariaLabel) {
+    button.setAttribute(
+      'aria-label',
+      ariaLabel
+    );
+  }
+
+  button.addEventListener(
+    'click',
+    async () => {
+      if (disabled) {
+        return;
+      }
+
+      state.page = page;
+      await render();
+
+      document
+        .getElementById('library-section')
+        ?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+    }
+  );
+
+  return button;
+}
+
+
+function renderPagination(totalPages) {
+  const pagination =
+    getEls().libraryPagination;
+
+  if (!pagination) {
     return;
   }
+
+  pagination.innerHTML = '';
 
   if (totalPages <= 1) {
-    libraryPagination.hidden = true;
-    libraryPagination.innerHTML = '';
+    pagination.hidden = true;
     return;
   }
 
-  libraryPagination.hidden = false;
-  libraryPagination.innerHTML = '';
+  pagination.hidden = false;
 
   const fragment =
     document.createDocumentFragment();
 
-  const createButton = (
-    label,
-    page,
-    {
-      disabled = false,
-      active = false,
-      ariaLabel = '',
-    } = {}
-  ) => {
-    const button =
-      document.createElement('button');
-
-    button.type = 'button';
-    button.className =
-      'library-pagination__button';
-
-if (active) {
-  button.classList.add('is-active');
-
-  button.setAttribute(
-    'aria-current',
-    'page'
-  );
-}
-
-    button.disabled = disabled;
-    button.textContent = label;
-
-    if (ariaLabel) {
-      button.setAttribute(
-        'aria-label',
-        ariaLabel
-      );
-    }
-
-    button.addEventListener(
-      'click',
-      async () => {
-        if (disabled) {
-          return;
-        }
-
-        libraryPage = page;
-
-        await render();
-
-        const librarySection =
-          document.getElementById(
-            'library-section'
-          );
-
-        if (librarySection) {
-          librarySection.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
-          });
-        }
-      }
-    );
-
-    return button;
-  };
-
   fragment.appendChild(
-    createButton(
+    createPageButton(
       '‹',
-      libraryPage - 1,
+      state.page - 1,
       {
-        disabled:
-          libraryPage <= 1,
+        disabled: state.page <= 1,
         ariaLabel:
           'Предыдущая страница',
       }
     )
   );
 
-  const maxVisiblePages = 5;
+  const max = 5;
 
-  let startPage =
+  let start =
     Math.max(
       1,
-      libraryPage -
-        Math.floor(maxVisiblePages / 2)
+      state.page -
+        Math.floor(max / 2)
     );
 
-  let endPage =
+  let end =
     Math.min(
       totalPages,
-      startPage +
-        maxVisiblePages -
-        1
+      start + max - 1
     );
 
   if (
-    endPage - startPage + 1 <
-    maxVisiblePages
+    end - start + 1 < max
   ) {
-    startPage =
+    start =
       Math.max(
         1,
-        endPage -
-          maxVisiblePages +
-          1
+        end - max + 1
       );
   }
 
-  if (startPage > 1) {
+  if (start > 1) {
     fragment.appendChild(
-      createButton(
+      createPageButton(
         '1',
         1,
         {
-          active: libraryPage === 1,
+          active:
+            state.page === 1,
         }
       )
     );
 
-    if (startPage > 2) {
+    if (start > 2) {
       const dots =
         document.createElement('span');
 
@@ -641,31 +580,31 @@ if (active) {
   }
 
   for (
-    let page = startPage;
-    page <= endPage;
-    page += 1
+    let page = start;
+    page <= end;
+    page++
   ) {
     if (
       page === 1 &&
-      startPage > 1
+      start > 1
     ) {
       continue;
     }
 
     fragment.appendChild(
-      createButton(
+      createPageButton(
         String(page),
         page,
         {
           active:
-            page === libraryPage,
+            page === state.page,
         }
       )
     );
   }
 
-  if (endPage < totalPages) {
-    if (endPage < totalPages - 1) {
+  if (end < totalPages) {
+    if (end < totalPages - 1) {
       const dots =
         document.createElement('span');
 
@@ -678,292 +617,218 @@ if (active) {
     }
 
     fragment.appendChild(
-      createButton(
+      createPageButton(
         String(totalPages),
         totalPages,
         {
           active:
-            libraryPage === totalPages,
+            state.page === totalPages,
         }
       )
     );
   }
 
   fragment.appendChild(
-    createButton(
+    createPageButton(
       '›',
-      libraryPage + 1,
+      state.page + 1,
       {
         disabled:
-          libraryPage >= totalPages,
+          state.page >= totalPages,
         ariaLabel:
           'Следующая страница',
       }
     )
   );
 
-  libraryPagination.appendChild(
-    fragment
-  );
+  pagination.appendChild(fragment);
 }
+
+
+// =========================================================
+// LIBRARY
+// =========================================================
+
+async function getLibrary() {
+  try {
+    return await storage.getLibraryWithDetails();
+  } catch (error) {
+    console.error(
+      '[library] load failed:',
+      error
+    );
+
+    return [];
+  }
+}
+
 
 // =========================================================
 // RENDER
 // =========================================================
 
 async function render() {
-
   const {
     resultsSection,
     resultsGrid,
     libraryGrid,
+    libraryStats,
   } = getEls();
 
-
-  // -----------------------------------------
-  // Search results
-  // -----------------------------------------
-
-  if (
-    currentView === 'search'
-  ) {
-
-    resultsSection.hidden =
-      false;
-
+  if (state.view === 'search') {
+    resultsSection.hidden = false;
 
     ui.renderGrid(
       resultsGrid,
-
-      filterResults(
-        currentSearchResults
+      filterByType(
+        state.searchResults
       ),
-
       {
-        onSelect:
-          openDetail,
+        onSelect: openDetail,
       }
     );
-
   } else {
-
-    resultsSection.hidden =
-      true;
+    resultsSection.hidden = true;
   }
 
+  const library =
+    await getLibrary();
 
-  // -----------------------------------------
-  // User library
-  // -----------------------------------------
+  updateGenreFilter(library);
 
-const library =
-  await getLibraryView();
+  const filtered =
+    filterLibrary(
+      filterByType(library)
+    );
 
-updateGenreFilter(library);
+  const sorted =
+    sortLibrary(filtered);
 
-const filteredLibrary =
-  filterLibraryByStatus(
-    filterLibraryByGenre(
-      filterResults(library)
-    )
+  const {
+    items,
+    totalPages,
+  } = getPage(sorted);
+
+  renderPagination(totalPages);
+
+  ui.renderStats(
+    libraryStats,
+    library
   );
 
-const sortedLibrary =
-  sortLibrary(filteredLibrary);
+  const renderMethod =
+    state.libraryView === 'list'
+      ? ui.renderList
+      : ui.renderGrid;
 
-const {
-  items: pageItems,
-  totalPages,
-} =
-  getLibraryPageItems(
-    sortedLibrary
-  );
-
-renderLibraryPagination(
-  totalPages
-);
-
-
-const {
-  libraryStats,
-} = getEls();
-
-ui.renderStats(
-  libraryStats,
-  library
-);
-
-if (libraryView === 'list') {
-  ui.renderList(
+  renderMethod(
     libraryGrid,
-    pageItems,
+    items,
     {
       onSelect: openDetail,
     }
   );
-} else {
-  ui.renderGrid(
-    libraryGrid,
-    pageItems,
-    {
-      onSelect: openDetail,
-    }
-  );
-}
 }
 
 
 // =========================================================
-// DETAIL MODAL
+// DETAIL
 // =========================================================
 
 async function openDetail(item) {
-
   const {
     modalOverlay,
     modal,
   } = getEls();
 
-
   let record = null;
 
-
   try {
-
     record =
       await storage.getLibraryRecord(
         item.id,
         item.provider
       );
-
   } catch (error) {
-
     console.error(
-      '[library] failed to get record:',
+      '[library] record load failed:',
       error
     );
   }
 
+  const fullItem =
+    await enrichDetails(item);
 
-  // Library items already have their
-  // media information cached.
-  //
-  // A fresh search result needs enrichment.
+  ui.openModal(
+    modalOverlay,
+    modal,
+    {
+      item: fullItem,
+      record,
+      onOpenItem: openDetail,
 
-const fullItem =
-  await enrichDetails(item);
-
-
-ui.openModal(
-  modalOverlay,
-  modal,
-  {
-    item: fullItem,
-
-    record,
-
-    onOpenItem:
-      openDetail,
-
-
-      // -------------------------------------
-      // ADD
-      // -------------------------------------
-
-        onAdd: async (changes) => {
-
-          try {
-
-            if (record) {
-              await storage.updateLibraryRecord(
-                fullItem.id,
-                fullItem.provider,
-                changes
-              );
-            } else {
-              await storage.addToLibrary(
-                fullItem,
-                changes
-              );
-            }
-
-            await render();
-
-            return true;
-
-          } catch (error) {
-
-            console.error(
-              '[library] failed to save item:',
-              error
-            );
-
-            alert(
-              error.message ||
-              'Не удалось сохранить изменения.'
-            );
-
-            return false;
-          }
-        },
-
-
-      // -------------------------------------
-      // SAVE
-      // -------------------------------------
-
-      onSave: async (changes) => {
-
+      onAdd: async changes => {
         try {
+          await storage.addToLibrary(
+            fullItem,
+            changes
+          );
 
+          await render();
+
+          return true;
+        } catch (error) {
+          console.error(
+            '[library] add failed:',
+            error
+          );
+
+          alert(
+            error.message ||
+            'Не удалось сохранить изменения.'
+          );
+
+          return false;
+        }
+      },
+
+      onSave: async changes => {
+        try {
           await storage.updateLibraryRecord(
             fullItem.id,
             fullItem.provider,
             changes
           );
 
-
           await render();
-
         } catch (error) {
-
           console.error(
-            '[library] failed to update item:',
+            '[library] update failed:',
             error
           );
-
 
           alert(
             error.message ||
             'Не удалось сохранить изменения.'
           );
+
+          throw error;
         }
       },
 
-
-      // -------------------------------------
-      // REMOVE
-      // -------------------------------------
-
       onRemove: async () => {
-
         try {
-
           await storage.removeFromLibrary(
             fullItem.id,
             fullItem.provider
           );
 
-
           await render();
-
         } catch (error) {
-
           console.error(
-            '[library] failed to remove item:',
+            '[library] remove failed:',
             error
           );
-
 
           alert(
             error.message ||
@@ -977,473 +842,368 @@ ui.openModal(
 
 
 // =========================================================
+// RANDOM PICKER
+// =========================================================
+
+async function openRandomPicker() {
+  if (state.searching) {
+    return;
+  }
+
+  const records =
+    await storage.getRandomLibraryCandidates();
+
+  if (!records.length) {
+    alert(
+      'В запланированном и поставленном на паузу пока ничего нет.'
+    );
+
+    return;
+  }
+
+  const candidates =
+    state.activeTypes.size === 0
+      ? records
+      : records.filter(record => {
+          const media =
+            storage.getCachedMediaItem(
+              record.mediaId,
+              record.provider
+            );
+
+          return (
+            media?.type &&
+            state.activeTypes.has(
+              media.type
+            )
+          );
+        });
+
+  if (!candidates.length) {
+    alert(
+      'Нет карточек, соответствующих выбранным типам.'
+    );
+
+    return;
+  }
+
+  let currentIndex = -1;
+  let currentItem = null;
+
+  const pick = async () => {
+    if (candidates.length === 1) {
+      currentIndex = 0;
+    } else {
+      let next = currentIndex;
+
+      while (next === currentIndex) {
+        next =
+          Math.floor(
+            Math.random() *
+            candidates.length
+          );
+      }
+
+      currentIndex = next;
+    }
+
+    currentItem =
+      await storage.getLibraryItemWithDetails(
+        candidates[currentIndex]
+      );
+
+    return currentItem;
+  };
+
+  const {
+    modalOverlay,
+    modal,
+  } = getEls();
+
+  await pick();
+
+  if (!currentItem) {
+    alert(
+      'Не удалось загрузить случайную карточку.'
+    );
+
+    return;
+  }
+
+  const show = () => {
+    ui.openRandomChoice(
+      modalOverlay,
+      modal,
+      currentItem,
+      {
+        onOpen: openDetail,
+        onAgain: async () => {
+          const next =
+            await pick();
+
+          if (next) {
+            show();
+          }
+        },
+      }
+    );
+  };
+
+  show();
+}
+
+
+// =========================================================
 // INITIALIZATION
 // =========================================================
 
 export function initHomePage() {
+  const {
+    searchForm,
+    searchInput,
+    typeFilters,
+    clearSearch,
+    homeButton,
+    librarySort,
+    libraryGenre,
+    libraryStatuses,
+    randomPicker,
+    viewSwitcher,
+  } = getEls();
 
-const {
-  searchForm,
-  searchInput,
-  typeFilters,
-  clearSearch,
-
-  homeButton,
-
-  librarySort: librarySortSelect,
-  libraryGenre: libraryGenreSelect,
-  libraryStatuses,
-  randomPicker,
-  viewSwitcher,
-} = getEls();
 
   window.addEventListener(
-  'authchange',
-  async () => {
+    'authchange',
+    async () => {
+      state.view = 'library';
+      state.searchResults = [];
+      state.page = 1;
 
-    currentView = 'library';
+      await render();
+    }
+  );
 
-    currentSearchResults = [];
-
-    await render();
-  }
-);
-
-
-  // =======================================================
-  // SEARCH
-  // =======================================================
 
   searchForm.addEventListener(
     'submit',
-    async (e) => {
+    async event => {
+      event.preventDefault();
 
-      e.preventDefault();
-
-
-      if (isSearching) {
+      if (state.searching) {
         return;
       }
 
-
       const query =
         searchInput.value.trim();
-
 
       if (!query) {
         return;
       }
 
-
       showLoading();
 
-
       try {
-
-        currentSearchResults =
+        state.searchResults =
           await searchAll(
             query,
-            activeTypes
+            state.activeTypes
           );
 
-
-        currentView =
-          'search';
-
+        state.view = 'search';
 
         await render();
-
       } catch (error) {
-
         console.error(
           '[search] failed:',
           error
         );
-
       } finally {
-
         await hideLoading();
       }
     }
   );
 
 
-  // =======================================================
-  // CLEAR SEARCH
-  // =======================================================
-
   clearSearch.addEventListener(
     'click',
     async () => {
-
-      currentView =
-        'library';
-
-      currentSearchResults =
-        [];
-
-      searchInput.value =
-        '';
-
+      state.view = 'library';
+      state.searchResults = [];
+      searchInput.value = '';
+      state.page = 1;
 
       await render();
     }
   );
 
-// =======================================================
-// HOME BUTTON
-// =======================================================
 
-homeButton.addEventListener(
-  'click',
-  async () => {
+  homeButton.addEventListener(
+    'click',
+    async () => {
+      state.view = 'library';
+      state.searchResults = [];
+      searchInput.value = '';
+      state.page = 1;
 
-    currentView =
-      'library';
+      await render();
 
-    currentSearchResults =
-      [];
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
+    }
+  );
 
-    searchInput.value =
-      '';
-
-    await render();
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
-
-  }
-);
-
-  // =======================================================
-  // TYPE FILTERS
-  // =======================================================
 
   typeFilters.addEventListener(
     'click',
-    async (e) => {
-
-      const btn =
-        e.target.closest(
+    async event => {
+      const button =
+        event.target.closest(
           '.type-filter'
         );
 
-
       if (
-        !btn ||
-        isSearching
+        !button ||
+        state.searching
       ) {
         return;
       }
 
-
       const type =
-        btn.dataset.type;
-
+        button.dataset.type;
 
       if (
-        activeTypes.has(type)
+        state.activeTypes.has(type)
       ) {
-
-        activeTypes.delete(
-          type
-        );
-
-        btn.classList.remove(
-          'is-active'
-        );
-
+        state.activeTypes.delete(type);
       } else {
-
-        activeTypes.add(
-          type
-        );
-
-        btn.classList.add(
-          'is-active'
-        );
+        state.activeTypes.add(type);
       }
 
-libraryPage = 1;
+      button.classList.toggle(
+        'is-active',
+        state.activeTypes.has(type)
+      );
+
+      state.page = 1;
+
       await render();
     }
   );
 
 
-  // =======================================================
-// LIBRARY SORT
-// =======================================================
+  librarySort.addEventListener(
+    'change',
+    async () => {
+      state.sort =
+        librarySort.value;
 
-librarySortSelect.addEventListener(
-  'change',
-  async () => {
-    librarySort = librarySortSelect.value;
-    libraryPage = 1;
-    await render();
-  }
-);
+      state.page = 1;
 
-
-// =======================================================
-// LIBRARY GENRE
-// =======================================================
-
-libraryGenreSelect.addEventListener(
-  'change',
-  async () => {
-    libraryGenre =
-      libraryGenreSelect.value;
-
-    libraryPage = 1;
-
-    await render();
-  }
-);
-
-
-
-// =======================================================
-// LIBRARY STATUS
-// =======================================================
-
-libraryStatuses.addEventListener(
-  'click',
-  async (e) => {
-    const button =
-      e.target.closest(
-        '.library-status'
-      );
-
-    if (!button) {
-      return;
+      await render();
     }
+  );
 
-    libraryStatus =
-      button.dataset.status || '';
 
-    libraryPage = 1;
+  libraryGenre.addEventListener(
+    'change',
+    async () => {
+      state.genre =
+        libraryGenre.value;
 
-    libraryStatuses
-      .querySelectorAll(
-        '.library-status'
-      )
-      .forEach((btn) => {
-        btn.classList.toggle(
-          'is-active',
-          btn === button
+      state.page = 1;
+
+      await render();
+    }
+  );
+
+
+  libraryStatuses.addEventListener(
+    'click',
+    async event => {
+      const button =
+        event.target.closest(
+          '.library-status'
         );
-      });
 
-    await render();
-  }
-);
-// =======================================================
-// LIBRARY VIEW
-// =======================================================
+      if (!button) {
+        return;
+      }
 
-viewSwitcher.addEventListener(
-  'click',
-  async (e) => {
-    const button =
-      e.target.closest(
-        '.view-switcher__button'
-      );
+      state.status =
+        button.dataset.status || '';
 
-    if (!button) {
-      return;
-    }
+      state.page = 1;
 
-    const view =
-      button.dataset.view;
-
-    if (
-      view !== 'cards' &&
-      view !== 'list'
-    ) {
-      return;
-    }
-
-    libraryView = view;
-
-    viewSwitcher
-      .querySelectorAll(
-        '.view-switcher__button'
-      )
-      .forEach((btn) => {
-        btn.classList.toggle(
-          'is-active',
-          btn === button
-        );
-      });
-
-    await render();
-  }
-);
-
-
-// =======================================================
-// RANDOM PICKER
-// =======================================================
-
-randomPicker.addEventListener(
-  'click',
-  async () => {
-
-    if (isSearching) {
-      return;
-    }
-
-const records =
-  await storage.getRandomLibraryCandidates();
-
-if (!records.length) {
-  alert(
-    'В запланированном и поставленном на паузу пока ничего нет.'
-  );
-
-  return;
-}
-
-const candidates =
-  activeTypes.size === 0
-    ? records
-    : records.filter((record) => {
-        const media =
-          storage.getCachedMediaItem(
-            record.mediaId,
-            record.provider
-          );
-
-        return (
-          media &&
-          media.type &&
-          activeTypes.has(
-            media.type
-          )
-        );
-      });
-
-if (!candidates.length) {
-  alert(
-    'Нет карточек, соответствующих выбранным типам.'
-  );
-
-  return;
-}
-
-if (!candidates.length) {
-  alert(
-    'В запланированном и поставленном на паузу пока ничего нет.'
-  );
-
-  return;
-}
-
-const randomRecord =
-  candidates[
-    Math.floor(
-      Math.random() *
-      candidates.length
-    )
-  ];
-
-let currentRecord =
-  randomRecord;
-
-let currentItem =
-  await storage.getLibraryItemWithDetails(
-    randomRecord
-  );
-
-  
-
-if (!currentItem) {
-  alert(
-    'Не удалось загрузить случайную карточку.'
-  );
-
-  return;
-}
-
-    const {
-      modalOverlay,
-      modal,
-    } = getEls();
-
-    const showRandom =
-      () => {
-
-        ui.openRandomChoice(
-          modalOverlay,
-          modal,
-          currentItem,
-          {
-            onOpen:
-              openDetail,
-
-onAgain:
-  async () => {
-
-    if (
-      candidates.length === 1
-    ) {
-      return;
-    }
-
-    const available =
-      candidates.filter(
-        record =>
-          record.mediaId !==
-          currentRecord.mediaId
-      );
-
-    const nextRecord =
-      available[
-        Math.floor(
-          Math.random() *
-          available.length
+      libraryStatuses
+        .querySelectorAll(
+          '.library-status'
         )
-      ];
-
-    const nextItem =
-      await storage.getLibraryItemWithDetails(
-        nextRecord
-      );
-
-    if (!nextItem) {
-      return;
-    }
-
-    currentRecord =
-      nextRecord;
-
-    currentItem =
-      nextItem;
-
-    showRandom();
-  },
-          }
+        .forEach(
+          current =>
+            current.classList.toggle(
+              'is-active',
+              current === button
+            )
         );
-      };
 
-    showRandom();
-  }
-);
-
-  // =======================================================
-  // INITIAL LIBRARY LOAD
-  // =======================================================
-
-  render().catch(
-    error => {
-
-      console.error(
-        '[library] initial render failed:',
-        error
-      );
-
+      await render();
     }
+  );
+
+
+  viewSwitcher.addEventListener(
+    'click',
+    async event => {
+      const button =
+        event.target.closest(
+          '.view-switcher__button'
+        );
+
+      if (!button) {
+        return;
+      }
+
+      const view =
+        button.dataset.view;
+
+      if (
+        view !== 'cards' &&
+        view !== 'list'
+      ) {
+        return;
+      }
+
+      state.libraryView = view;
+
+      viewSwitcher
+        .querySelectorAll(
+          '.view-switcher__button'
+        )
+        .forEach(
+          current =>
+            current.classList.toggle(
+              'is-active',
+              current === button
+            )
+        );
+
+      await render();
+    }
+  );
+
+
+  randomPicker.addEventListener(
+    'click',
+    openRandomPicker
+  );
+
+
+  render().catch(error =>
+    console.error(
+      '[library] initial render failed:',
+      error
+    )
   );
 }
