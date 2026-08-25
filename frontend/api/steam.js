@@ -1,9 +1,6 @@
 const STEAM_STORE_URL =
   'https://store.steampowered.com';
 
-const STEAM_CDN =
-  'https://cdn.cloudflare.steamstatic.com/steam/apps';
-
 const STEAM_TIMEOUT_MS = 5000;
 
 
@@ -17,11 +14,9 @@ async function fetchSteam(url) {
       STEAM_TIMEOUT_MS
     );
 
-
   try {
     return await fetch(url, {
-      signal:
-        controller.signal,
+      signal: controller.signal,
 
       headers: {
         'User-Agent':
@@ -40,60 +35,6 @@ export default async function handler(
   res
 ) {
   try {
-
-    /*
-     * Steam image proxy
-     */
-    if (req.query.image) {
-
-      const imageUrl =
-        `${STEAM_CDN}/${req.query.image}`;
-
-
-      const response =
-        await fetch(imageUrl);
-
-
-      if (!response.ok) {
-        return res
-          .status(
-            response.status
-          )
-          .end();
-      }
-
-
-      const contentType =
-        response.headers.get(
-          'content-type'
-        ) ||
-        'image/jpeg';
-
-
-      const buffer =
-        Buffer.from(
-          await response.arrayBuffer()
-        );
-
-
-      res.setHeader(
-        'Content-Type',
-        contentType
-      );
-
-
-      res.setHeader(
-        'Cache-Control',
-        'public, max-age=86400'
-      );
-
-
-      return res
-        .status(200)
-        .send(buffer);
-    }
-
-
     const {
       q,
       id
@@ -103,27 +44,22 @@ export default async function handler(
     let url;
 
 
-    /*
-     * Получение подробностей игры
-     */
+    // Получение подробностей игры
     if (id) {
 
       url = new URL(
         `${STEAM_STORE_URL}/api/appdetails`
       );
 
-
       url.searchParams.set(
         'appids',
         id
       );
 
-
       url.searchParams.set(
         'l',
         'russian'
       );
-
 
       url.searchParams.set(
         'cc',
@@ -131,39 +67,32 @@ export default async function handler(
       );
 
 
-    /*
-     * Поиск игр
-     */
+    // Поиск игр
     } else if (q) {
 
       url = new URL(
         `${STEAM_STORE_URL}/api/storesearch`
       );
 
-
       url.searchParams.set(
         'term',
         q
       );
-
 
       url.searchParams.set(
         'l',
         'russian'
       );
 
-
       url.searchParams.set(
         'cc',
         'ru'
       );
 
-
       url.searchParams.set(
         'count',
         '20'
       );
-
 
       url.searchParams.set(
         'category1',

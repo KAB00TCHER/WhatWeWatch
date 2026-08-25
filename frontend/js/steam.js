@@ -199,11 +199,12 @@ function mapSearchGame(
     rating:
       null,
 
-   poster:
-  `/api/steam?image=${appId}/library_600x900_2x.jpg`,
+  poster:
+  game.tiny_image ||
+  null,
 
 backdrop:
-  `/api/steam?image=${appId}/library_hero.jpg`,
+  null,
 
 
     description:
@@ -269,11 +270,16 @@ function mapDetails(
       null,
 
   poster:
-  `/api/steam?image=${appId}/library_600x900_2x.jpg`,
+  raw.capsule_imagev5 ||
+  raw.capsule_image ||
+  raw.header_image ||
+  null,
 
 backdrop:
-  `/api/steam?image=${appId}/library_hero.jpg`,
-
+  raw.background ||
+  raw.background_raw ||
+  raw.header_image ||
+  null,
     description:
       raw.short_description ||
       raw.detailed_description ||
