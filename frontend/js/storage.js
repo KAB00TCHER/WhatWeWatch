@@ -479,6 +479,8 @@ function parseMediaId(
 
     shikimori:
       /^shikimori-anime-(.+)$/,
+    steam:
+  /^steam-game-(.+)$/,
   };
 
   const pattern =
@@ -527,6 +529,16 @@ function parseMediaId(
         'anime',
     };
   }
+
+  if (provider === 'steam') {
+  return {
+    providerId:
+      match[1],
+
+    type:
+      'game',
+  };
+}
 
   return null;
 }
