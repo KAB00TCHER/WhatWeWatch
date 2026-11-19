@@ -1382,3 +1382,30 @@ export async function getTMDBDetails(
     return null;
   }
 }
+
+export async function checkTMDBConnection(signal) {
+  if (!isConfigured()) {
+    throw new Error('API-ключ TMDB не настроен.');
+  }
+
+  const response = await fetch(
+    buildUrl('/search/movie', {
+      query: 'Inception',
+      language: 'en-US',
+      page: 1,
+    }),
+    { signal }
+  );
+
+  if (!response.ok) {
+    throw new Error(`TMDB ответил HTTP ${response.status}.`);
+  }
+
+  const data = await response.json();
+
+  if (!Array.isArray(data.results) || !data.results.length) {
+    throw new Error('TMDB ответил, но тестовый поиск не вернул результатов.');
+  }
+
+  return `API отвечает. Тестовый поиск вернул результатов: ${data.results.length}.`;
+}

@@ -4,6 +4,10 @@ import {
   supabaseRequest,
 } from './supabase.js';
 
+import {
+  checkTMDBConnection,
+} from './tmdb.js';
+
 let elements = null;
 let lastReport = '';
 
@@ -81,6 +85,97 @@ function makeTimeout(ms = 10000) {
     signal: controller.signal,
     clear: () => clearTimeout(timer),
   };
+}
+
+
+async function checkTMDB() {
+  const timeout = makeTimeout(12000);
+
+  try {
+    return await checkTMDBConnection(timeout.signal);
+  } finally {
+    timeout.clear();
+  }
+}
+
+
+async function checkProxyProvider(
+  name,
+  endpoint,
+  params,
+  resultKey
+) {
+  const timeout = makeTimeout(12000);
+
+  try {
+    const query = new URLSearchParams(params);
+
+    const response = await fetch(
+      `${endpoint}?${query}`,
+      {
+        method: 'GET',
+        signal: timeout.signal,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `${name} ответил HTTP ${response.status}.`
+      );
+    }
+
+    const data = await response.json();
+
+    const items = resultKey
+      ? data?.[resultKey]
+      : data;
+
+    if (!Array.isArray(items)) {
+      throw new Error(
+        `${name} вернул неожиданный формат ответа.`
+      );
+    }
+
+    if (!items.length) {
+      throw new Error(
+        `${name} ответил, но тестовый поиск не вернул результатов.`
+      );
+    }
+
+    return `API отвечает. Тестовый поиск вернул результатов: ${items.length}.`;
+  } finally {
+    timeout.clear();
+  }
+}
+
+
+function checkShikimori() {
+  return checkProxyProvider(
+    'Shikimori',
+    '/api/shikimori',
+    { q: 'Naruto' },
+    null
+  );
+}
+
+
+function checkRAWG() {
+  return checkProxyProvider(
+    'RAWG',
+    '/api/rawg',
+    { q: 'Portal 2' },
+    'results'
+  );
+}
+
+
+function checkSteam() {
+  return checkProxyProvider(
+    'Steam',
+    '/api/steam',
+    { q: 'Portal 2' },
+    'items'
+  );
 }
 
 async function checkInternet() {
@@ -280,6 +375,11 @@ async function runDiagnostics() {
       'Проверка пропущена: не удалось определить состояние авторизации.'
     );
   }
+
+    await run('TMDB', checkTMDB);
+  await run('Shikimori', checkShikimori);
+  await run('RAWG', checkRAWG);
+  await run('Steam', checkSteam);
 
   const errors = results.filter(
     item => item.status === 'error'
