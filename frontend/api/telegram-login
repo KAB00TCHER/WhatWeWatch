@@ -1,0 +1,323 @@
+
+const SUPABASE_URL =
+  'https://ppakdykkaocmvfncabun.supabase.co';
+
+const SUPABASE_PUBLISHABLE_KEY =
+  'sb_publishable_pi8y8cdWltiYD8SIrHJ2cQ_LZ9e_Aao';
+
+const MAX_INIT_DATA_AGE = 600;
+
+function sendError(res, status, error) {
+  return res.status(status).json({ error });
+}
+
+async function hmac(key, data) {
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    key,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  return new Uint8Array(
+    await crypto.subtle.sign('HMAC', cryptoKey, data)
+  );
+}
+
+function toHex(bytes) {
+  return Array.from(bytes)
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function safeEqual(a, b) {
+  if (a.length !== b.length) return false;
+
+  let difference = 0;
+
+  for (let i = 0; i < a.length; i++) {
+    difference |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+
+  return difference === 0;
+}
+
+async function validateTelegramInitData(initData) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+
+  if (!botToken) {
+    throw new Error('Telegram server configuration error');
+  }
+
+  if (
+    typeof initData !== 'string' ||
+    !initData ||
+    initData.length > 16000
+  ) {
+    throw new Error('Invalid Telegram initData');
+  }
+
+  const params = new URLSearchParams(initData);
+  const receivedHash = params.get('hash');
+
+  if (!receivedHash || !/^[a-f0-9]{64}$/i.test(receivedHash)) {
+    throw new Error('Invalid Telegram signature');
+  }
+
+  const authDate = Number(params.get('auth_date'));
+  const now = Math.floor(Date.now() / 1000);
+
+  if (
+    !Number.isInteger(authDate) ||
+    authDate > now + 60 ||
+    now - authDate > MAX_INIT_DATA_AGE
+  ) {
+    throw new Error('Telegram session expired. Reopen the Mini App.');
+  }
+
+  const dataCheckString = Array.from(params.entries())
+    .filter(([key]) => key !== 'hash')
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
+
+  const encoder = new TextEncoder();
+
+  const secretKey = await hmac(
+    encoder.encode('WebAppData'),
+    encoder.encode(botToken)
+  );
+
+  const calculatedHash = toHex(
+    await hmac(secretKey, encoder.encode(dataCheckString))
+  );
+
+  if (!safeEqual(calculatedHash, receivedHash.toLowerCase())) {
+    throw new Error('Invalid Telegram signature');
+  }
+
+  let telegramUser;
+
+  try {
+    telegramUser = JSON.parse(params.get('user') || '');
+  } catch {
+    throw new Error('Invalid Telegram user data');
+  }
+
+  if (
+    !telegramUser ||
+    !Number.isSafeInteger(telegramUser.id) ||
+    telegramUser.id <= 0
+  ) {
+    throw new Error('Telegram user not found');
+  }
+
+  return telegramUser;
+}
+
+async function adminRequest(path, options = {}) {
+  const secretKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!secretKey) {
+    throw new Error('Database server configuration error');
+  }
+
+  return fetch(`${SUPABASE_URL}/auth/v1${path}`, {
+    ...options,
+    headers: {
+      apikey: secretKey,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+}
+
+async function databaseRequest(path) {
+  const secretKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!secretKey) {
+    throw new Error('Database server configuration error');
+  }
+
+  return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      apikey: secretKey,
+      'Content-Type': 'application/json',
+    },
+  });
+}
+
+async function parseResponse(response) {
+  const text = await response.text();
+
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store');
+
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return sendError(res, 405, 'Method not allowed');
+  }
+
+  try {
+    const body = typeof req.body === 'string'
+      ? JSON.parse(req.body)
+      : req.body;
+
+    // 1. Проверяем подлинность Telegram.
+    const telegramUser = await validateTelegramInitData(
+      body?.initData
+    );
+
+    const telegramId = String(telegramUser.id);
+
+    // 2. Ищем только существующую привязку.
+    const mappingResponse = await databaseRequest(
+      `telegram_accounts?select=telegram_id,user_id&telegram_id=eq.${encodeURIComponent(telegramId)}`
+    );
+
+    if (!mappingResponse.ok) {
+      console.error(
+        '[telegram-login] Mapping lookup failed:',
+        mappingResponse.status
+      );
+
+      return sendError(res, 500, 'Database lookup failed');
+    }
+
+    const mappings = await parseResponse(mappingResponse);
+
+    if (!Array.isArray(mappings) || mappings.length === 0) {
+      return sendError(
+        res,
+        404,
+        'Этот Telegram не привязан к аккаунту WhatWeWatch.'
+      );
+    }
+
+    const userId = mappings[0].user_id;
+
+    // 3. Проверяем, что Supabase-пользователь существует.
+    const userResponse = await adminRequest(
+      `/admin/users/${encodeURIComponent(userId)}`
+    );
+
+    if (!userResponse.ok) {
+      console.error(
+        '[telegram-login] User lookup failed:',
+        userResponse.status
+      );
+
+      return sendError(res, 500, 'Could not verify account');
+    }
+
+    const supabaseUser = await parseResponse(userResponse);
+
+    if (
+      !supabaseUser?.id ||
+      supabaseUser.id !== userId ||
+      !supabaseUser.email
+    ) {
+      return sendError(res, 404, 'Supabase account not found');
+    }
+
+    // 4. Создаём одноразовый Magic Link для найденного пользователя.
+    const linkResponse = await adminRequest(
+      '/admin/generate_link',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'magiclink',
+          email: supabaseUser.email,
+        }),
+      }
+    );
+
+    const linkData = await parseResponse(linkResponse);
+
+    if (!linkResponse.ok) {
+      console.error(
+        '[telegram-login] Link generation failed:',
+        linkResponse.status
+      );
+
+      return sendError(res, 500, 'Could not create login session');
+    }
+
+    // Проверяем, что генерация ссылки не затронула другой аккаунт.
+    if (
+      linkData?.user?.id !== userId ||
+      !linkData?.hashed_token
+    ) {
+      console.error('[telegram-login] Generated user mismatch');
+
+      return sendError(res, 500, 'Account verification failed');
+    }
+
+    // 5. Обмениваем одноразовый токен на Supabase-сессию.
+    const verifyResponse = await fetch(
+      `${SUPABASE_URL}/auth/v1/verify`,
+      {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'magiclink',
+          token_hash: linkData.hashed_token,
+        }),
+      }
+    );
+
+    const session = await parseResponse(verifyResponse);
+
+    if (!verifyResponse.ok) {
+      console.error(
+        '[telegram-login] Token verification failed:',
+        verifyResponse.status
+      );
+
+      return sendError(res, 500, 'Could not complete login');
+    }
+
+    // 6. Последняя проверка перед передачей токенов клиенту.
+    if (
+      !session?.access_token ||
+      !session?.refresh_token ||
+      session?.user?.id !== userId
+    ) {
+      console.error('[telegram-login] Session user mismatch');
+
+      return sendError(res, 500, 'Invalid login session');
+    }
+
+    return res.status(200).json({
+      success: true,
+      session,
+    });
+
+  } catch (error) {
+    console.error('[telegram-login] Error:', error);
+
+    const message = error?.message || '';
+
+    if (
+      message.includes('Telegram signature') ||
+      message.includes('Telegram initData') ||
+      message.includes('Telegram user') ||
+      message.includes('Telegram session')
+    ) {
+      return sendError(res, 401, message);
+    }
+
+    return sendError(res, 500, 'Internal server error');
+  }
+}
