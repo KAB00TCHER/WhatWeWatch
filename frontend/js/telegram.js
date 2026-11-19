@@ -138,35 +138,7 @@ function updateTheme() {
   }
 }
 
-function initHapticFeedback() {
-  if (!tg?.HapticFeedback) return;
 
-  document.addEventListener('click', event => {
-    const target = event.target.closest(
-      'button, .card, .library-list-item, .stats-card'
-    );
-
-    if (!target || target.disabled) return;
-
-    try {
-      if (
-        target.matches(
-          '.type-filter, .library-status, .view-switcher__button'
-        )
-      ) {
-        tg.HapticFeedback.selectionChanged();
-        return;
-      }
-
-      tg.HapticFeedback.impactOccurred('light');
-    } catch (error) {
-      console.warn(
-        '[telegram] Haptic feedback failed:',
-        error
-      );
-    }
-  });
-}
 
 
 function initHapticFeedback() {
