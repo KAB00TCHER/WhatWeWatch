@@ -2,10 +2,10 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+>
 
   <title>WhatWeWatch</title>
 
@@ -475,22 +475,101 @@
       >
         Выйти
       </button>
-
+      <button
+  type="button"
+  class="button"
+  id="diagnostics-button"
+>
+  Диагностика
+</button>
     </div>
   </div>
+<div
+  class="diagnostics-overlay"
+  id="diagnostics-overlay"
+  hidden
+>
+  <section
+    class="diagnostics-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="diagnostics-title"
+  >
+    <div class="diagnostics-header">
+      <h2 id="diagnostics-title">
+        Диагностика
+      </h2>
 
+      <button
+        type="button"
+        class="diagnostics-close"
+        id="diagnostics-close"
+        aria-label="Закрыть"
+      >
+        ×
+      </button>
+    </div>
 
-  <footer class="app-footer">
-    <p>
-      WhatWeWatch — личная медиатека
+    <p class="diagnostics-description">
+      Проверка подключения приложения к сервисам.
     </p>
-  </footer>
+
+    <div
+      class="diagnostics-results"
+      id="diagnostics-results"
+    >
+      <p class="diagnostics-empty">
+        Нажмите «Начать проверку».
+      </p>
+    </div>
+
+    <p
+      class="diagnostics-summary"
+      id="diagnostics-summary"
+    ></p>
+
+    <div class="diagnostics-actions">
+      <button
+        type="button"
+        class="button button--primary"
+        id="diagnostics-run"
+      >
+        Начать проверку
+      </button>
+
+      <button
+        type="button"
+        class="button"
+        id="diagnostics-copy"
+        disabled
+      >
+        Скопировать отчёт
+      </button>
+    </div>
+  </section>
+</div>
+
+<footer class="app-footer">
+  <p>
+    WhatWeWatch — личная медиатека
+  </p>
+
+  <button
+    type="button"
+    class="text-button"
+    id="diagnostics-button"
+  >
+    Диагностика соединения
+  </button>
+</footer>
 
 
-  <script
-    type="module"
-    src="js/app.js"
-  ></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<script
+  type="module"
+  src="js/app.js"
+></script>
 
 </body>
 </html>
