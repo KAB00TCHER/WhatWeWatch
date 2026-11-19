@@ -13,7 +13,9 @@ function getElements() {
   }
 
   elements = {
-    button: document.getElementById('diagnostics-button'),
+    buttons: document.querySelectorAll(
+      '.diagnostics-open-button'
+    ),
     overlay: document.getElementById('diagnostics-overlay'),
     close: document.getElementById('diagnostics-close'),
     run: document.getElementById('diagnostics-run'),
@@ -126,7 +128,7 @@ async function checkAuth() {
 
   return {
     authenticated: true,
-    details: `Сессия активна. Аккаунт: ${user.email || 'email не указан'}.`,
+    details: 'Сессия активна. Пользователь авторизован.',
   };
 }
 
@@ -332,20 +334,22 @@ async function copyReport() {
 export function initDiagnostics() {
   const els = getElements();
 
-  if (
-    !els.button ||
-    !els.overlay ||
-    !els.close ||
-    !els.run ||
-    !els.copy
-  ) {
+if (
+  !els.buttons.length ||
+  !els.overlay ||
+  !els.close ||
+  !els.run ||
+  !els.copy
+) {
     console.error('[diagnostics] Required elements not found.');
     return;
   }
 
-  els.button.addEventListener('click', () => {
+els.buttons.forEach(button => {
+  button.addEventListener('click', () => {
     els.overlay.hidden = false;
   });
+});
 
   els.close.addEventListener('click', () => {
     els.overlay.hidden = true;
