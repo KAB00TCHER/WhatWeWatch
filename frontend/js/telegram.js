@@ -1,11 +1,12 @@
 
 const tg = window.Telegram?.WebApp || null;
 
-const MODAL_SELECTORS = [
+const BACK_ACTION_SELECTORS = [
   '#modal-overlay',
   '#auth-overlay',
   '#auth-modal',
   '#diagnostics-overlay',
+  '#results-section',
 ];
 
 const DEFAULT_THEME = {
@@ -21,8 +22,8 @@ const DEFAULT_THEME = {
   accent_text_color: '#e2a33d',
 };
 
-function isModalOpen() {
-  return MODAL_SELECTORS.some(selector => {
+function isBackActionAvailable() {
+  return BACK_ACTION_SELECTORS.some(selector => {
     const element = document.querySelector(selector);
     return element && !element.hidden;
   });
@@ -53,12 +54,19 @@ function closeCurrentModal() {
       return;
     }
   }
+
+  const resultsSection =
+    document.getElementById('results-section');
+
+  if (resultsSection && !resultsSection.hidden) {
+    document.getElementById('clear-search')?.click();
+  }
 }
 
 function updateBackButton() {
   if (!tg?.BackButton) return;
 
-  if (isModalOpen()) {
+  if (isBackActionAvailable()) {
     tg.BackButton.show();
   } else {
     tg.BackButton.hide();
@@ -130,6 +138,36 @@ function updateTheme() {
   }
 }
 
+function initHapticFeedback() {
+  if (!tg?.HapticFeedback) return;
+
+  document.addEventListener('click', event => {
+    const target = event.target.closest(
+      'button, .card, .library-list-item, .stats-card'
+    );
+
+    if (!target || target.disabled) return;
+
+    try {
+      if (
+        target.matches(
+          '.type-filter, .library-status, .view-switcher__button'
+        )
+      ) {
+        tg.HapticFeedback.selectionChanged();
+        return;
+      }
+
+      tg.HapticFeedback.impactOccurred('light');
+    } catch (error) {
+      console.warn(
+        '[telegram] Haptic feedback failed:',
+        error
+      );
+    }
+  });
+}
+
 
 function initHapticFeedback() {
   if (!tg?.HapticFeedback) return;
@@ -185,7 +223,7 @@ export function initTelegramApp() {
 
   const observer = new MutationObserver(updateBackButton);
 
-  MODAL_SELECTORS.forEach(selector => {
+  BACK_ACTION_SELECTORS.forEach(selector => {
     const element = document.querySelector(selector);
 
     if (element) {
