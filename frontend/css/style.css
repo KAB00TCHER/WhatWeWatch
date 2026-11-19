@@ -3023,3 +3023,17 @@ html.telegram-mini-app .auth-overlay,
 html.telegram-mini-app .diagnostics-overlay {
   max-height: var(--telegram-viewport-height, 100vh);
 }
+
+
+#telegram-link-button {
+  width: 100%;
+  margin-bottom: var(--space-3);
+}
+
+.telegram-link-status {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}

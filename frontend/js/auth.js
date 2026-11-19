@@ -1,12 +1,11 @@
 // js/auth.js
-
 import {
   signUp,
   signIn,
   signOut,
+  getAccessToken,
   getCurrentUser as supabaseGetCurrentUser,
 } from './supabase.js';
-
 
 // =========================================================
 // AUTH API
@@ -50,6 +49,7 @@ export function getCurrentUser() {
 
 let currentUser = null;
 let mode = 'login';
+let telegramLinked = false;
 
 let elements = null;
 
@@ -138,6 +138,16 @@ function getElements() {
       document.getElementById(
         'account-logout'
       ),
+
+      telegramLinkButton:
+  document.getElementById(
+    'telegram-link-button'
+  ),
+
+telegramLinkStatus:
+  document.getElementById(
+    'telegram-link-status'
+  ),
   };
 
   return elements;
@@ -232,8 +242,31 @@ function openAccountModal() {
   els.accountEmail.textContent =
     currentUser?.email || '';
 
-  els.accountModal.hidden =
-    false;
+  const telegramAvailable =
+    Boolean(
+      window.Telegram?.WebApp?.initData
+    );
+
+  els.telegramLinkButton.hidden =
+    !telegramAvailable;
+
+  els.telegramLinkButton.disabled =
+    telegramLinked;
+
+  els.telegramLinkButton.textContent =
+    telegramLinked
+      ? 'Telegram привязан'
+      : 'Привязать Telegram';
+
+  els.telegramLinkStatus.hidden =
+    !telegramLinked;
+
+  els.telegramLinkStatus.textContent =
+    telegramLinked
+      ? 'Telegram успешно привязан к этому аккаунту.'
+      : '';
+
+  els.accountModal.hidden = false;
 }
 
 
@@ -410,6 +443,81 @@ async function handleAuthSubmit(
 
 
 // =========================================================
+// TELEGRAM LINK
+// =========================================================
+
+async function handleTelegramLink() {
+  const els = getElements();
+
+  const telegram = window.Telegram?.WebApp;
+  const initData = telegram?.initData;
+  const accessToken = getAccessToken();
+
+  if (!initData || !accessToken) {
+    els.telegramLinkStatus.textContent =
+      'Не удалось получить данные Telegram или сессию аккаунта.';
+
+    els.telegramLinkStatus.hidden = false;
+    return;
+  }
+
+  els.telegramLinkButton.disabled = true;
+  els.telegramLinkButton.textContent = 'Привязываем...';
+
+  els.telegramLinkStatus.hidden = true;
+
+  try {
+    const response = await fetch('/api/telegram-link', {
+      method: 'POST',
+
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+
+      body: JSON.stringify({
+        initData,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error || 'Не удалось привязать Telegram.'
+      );
+    }
+
+    telegramLinked = true;
+
+    els.telegramLinkButton.textContent =
+      'Telegram привязан';
+
+    els.telegramLinkStatus.textContent =
+      data.alreadyLinked
+        ? 'Этот Telegram уже привязан к вашему аккаунту.'
+        : 'Telegram успешно привязан к вашему аккаунту.';
+
+    els.telegramLinkStatus.hidden = false;
+
+    console.log('[auth] Telegram linked');
+
+  } catch (error) {
+    console.error('[auth] Telegram linking failed:', error);
+
+    els.telegramLinkStatus.textContent =
+      error?.message ||
+      'Не удалось привязать Telegram.';
+
+    els.telegramLinkStatus.hidden = false;
+
+    els.telegramLinkButton.disabled = false;
+    els.telegramLinkButton.textContent =
+      'Привязать Telegram';
+  }
+}
+
+// =========================================================
 // LOGOUT
 // =========================================================
 
@@ -517,6 +625,11 @@ export async function initAuthUI() {
     'click',
     handleLogout
   );
+
+  els.telegramLinkButton.addEventListener(
+  'click',
+  handleTelegramLink
+);
 
   console.log(
     '[auth] UI initialized'
