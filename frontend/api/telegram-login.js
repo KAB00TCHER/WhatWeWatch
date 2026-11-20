@@ -401,7 +401,7 @@ export default async function handler(req, res) {
       );
     }
 
-   
+
 const hashedToken =
   linkData?.hashed_token ||
   linkData?.properties?.hashed_token ||
@@ -433,16 +433,6 @@ if (
   );
 }
 
-      console.error(
-        '[telegram-login] Generated user mismatch'
-      );
-
-      return sendError(
-        res,
-        500,
-        'Account verification failed'
-      );
-    }
 
 
     // 5. Обмениваем одноразовый токен на сессию.
