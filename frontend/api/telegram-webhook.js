@@ -312,6 +312,9 @@ function createInlineResult(item) {
   const mediaUrl =
     `https://www.themoviedb.org/${item.type}/${item.id}`;
 
+  const kinoMixSearchUrl =
+    `https://kinomix.web.app/search?query=${encodeURIComponent(item.title)}`;
+
   return {
     type: 'photo',
 
@@ -344,6 +347,10 @@ function createInlineResult(item) {
           {
             text: 'Подробнее в TMDB',
             url: mediaUrl,
+          },
+          {
+            text: 'Найти на KinoMix',
+            url: kinoMixSearchUrl,
           },
         ],
       ],
