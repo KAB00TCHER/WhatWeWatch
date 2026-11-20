@@ -242,6 +242,7 @@ function scoreResult(item, query) {
 
 
 
+
 function createInlineResult(item) {
   const year = getYear(item.date);
 
@@ -315,10 +316,12 @@ function createInlineResult(item) {
 
   const kinoMixSearchUrl =
     `https://kinomix.web.app/search?query=${encodeURIComponent(
-      year
-        ? `${item.title} ${year}`
-        : item.title
+      year ? `${item.title} ${year}` : item.title
     )}`;
+
+  // Скрытая ссылка нужна Telegram для создания превью постера.
+  const posterPreviewLink =
+    `<a href="${item.poster}">\u200B</a>`;
 
   return {
     type: 'article',
@@ -341,8 +344,19 @@ function createInlineResult(item) {
     thumbnail_url: item.thumb || undefined,
 
     input_message_content: {
-      message_text: messageParts.join('\n'),
+      message_text:
+        messageParts.join('\n') +
+        '\n\n' +
+        posterPreviewLink,
+
       parse_mode: 'HTML',
+
+      link_preview_options: {
+        is_disabled: false,
+        url: item.poster,
+        prefer_large_media: true,
+        show_above_text: true,
+      },
     },
 
     reply_markup: {
