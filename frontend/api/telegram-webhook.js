@@ -240,6 +240,7 @@ function scoreResult(item, query) {
 
 
 
+
 function createInlineResult(item) {
   const year = getYear(item.date);
 
@@ -275,36 +276,35 @@ function createInlineResult(item) {
     ? `${item.title} (${year})`
     : item.title;
 
-  // Текст сообщения, которое отправится в чат.
-  const messageParts = [
+  const captionParts = [
     `<b>${escapeHtml(item.title)}</b>`,
   ];
 
   if (originalTitle) {
-    messageParts.push(
+    captionParts.push(
       `<i>${escapeHtml(originalTitle)}</i>`
     );
   }
 
-  messageParts.push(
+  captionParts.push(
     `${typeLabel}${year ? ` · ${year}` : ''}`,
     `Рейтинг TMDB: <b>${rating}</b>`
   );
 
   if (genreLine) {
-    messageParts.push(
+    captionParts.push(
       `Жанры: ${escapeHtml(genreLine)}`
     );
   }
 
   if (overview) {
-    messageParts.push(
+    captionParts.push(
       '',
       escapeHtml(overview)
     );
   }
 
-  messageParts.push(
+  captionParts.push(
     '',
     '<i>Найдено через WhatWeWatch</i>'
   );
@@ -313,9 +313,13 @@ function createInlineResult(item) {
     `https://www.themoviedb.org/${item.type}/${item.id}`;
 
   return {
-    type: 'article',
+    type: 'photo',
 
     id: `tmdb-${item.type}-${item.id}`,
+
+    photo_url: item.poster,
+
+    thumbnail_url: item.thumb,
 
     title: displayTitle,
 
@@ -324,17 +328,15 @@ function createInlineResult(item) {
       year || 'Год неизвестен',
       `TMDB ${rating}`,
       genreLine,
+      originalTitle,
     ]
       .filter(Boolean)
       .join(' · ')
       .slice(0, 255),
 
-    thumbnail_url: item.thumb || undefined,
+    caption: captionParts.join('\n'),
 
-    input_message_content: {
-      message_text: messageParts.join('\n'),
-      parse_mode: 'HTML',
-    },
+    parse_mode: 'HTML',
 
     reply_markup: {
       inline_keyboard: [
@@ -348,6 +350,7 @@ function createInlineResult(item) {
     },
   };
 }
+
 
 
 
