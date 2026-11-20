@@ -401,14 +401,38 @@ export default async function handler(req, res) {
       );
     }
 
-    const hashedToken =
-      linkData?.hashed_token ||
-      linkData?.properties?.hashed_token;
+   
+const hashedToken =
+  linkData?.hashed_token ||
+  linkData?.properties?.hashed_token ||
+  linkData?.data?.properties?.hashed_token;
 
-    if (
-      linkData?.user?.id !== userId ||
-      !hashedToken
-    ) {
+const generatedUserId =
+  linkData?.id ||
+  linkData?.user?.id ||
+  linkData?.data?.user?.id;
+
+if (
+  generatedUserId !== userId ||
+  !hashedToken
+) {
+  console.error(
+    '[telegram-login] Generated user mismatch:',
+    {
+      userIdMatches: generatedUserId === userId,
+      hasHashedToken: Boolean(hashedToken),
+      responseHasId: Boolean(linkData?.id),
+      responseHasUser: Boolean(linkData?.user?.id),
+    }
+  );
+
+  return sendError(
+    res,
+    500,
+    'Account verification failed'
+  );
+}
+
       console.error(
         '[telegram-login] Generated user mismatch'
       );
