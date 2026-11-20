@@ -8,6 +8,36 @@ const TMDB_THUMB =
   'https://image.tmdb.org/t/p/w185';
 
 
+  const TMDB_GENRES = {
+  12: 'Приключения',
+  14: 'Фэнтези',
+  16: 'Мультфильм',
+  18: 'Драма',
+  27: 'Ужасы',
+  28: 'Боевик',
+  35: 'Комедия',
+  36: 'История',
+  37: 'Вестерн',
+  53: 'Триллер',
+  80: 'Криминал',
+  99: 'Документальный',
+  878: 'Фантастика',
+  9648: 'Детектив',
+  10402: 'Музыка',
+  10749: 'Мелодрама',
+  10751: 'Семейный',
+  10752: 'Военный',
+  10759: 'Боевик и приключения',
+  10762: 'Детский',
+  10763: 'Новости',
+  10764: 'Реалити',
+  10765: 'Фантастика и фэнтези',
+  10766: 'Мыльная опера',
+  10767: 'Ток-шоу',
+  10768: 'Военный и политический',
+  10770: 'Телефильм',
+};
+
 // =========================================================
 // HELPERS
 // =========================================================
@@ -132,6 +162,11 @@ async function searchTMDB(
       overview:
         item.overview || '',
 
+      genreIds:
+        Array.isArray(item.genre_ids)
+          ? item.genre_ids
+          : [],
+
       rating:
         Number(item.vote_average || 0),
 
@@ -203,6 +238,7 @@ function scoreResult(item, query) {
 // TELEGRAM INLINE RESULTS
 // =========================================================
 
+
 function createInlineResult(item) {
   const year =
     getYear(item.date);
@@ -220,24 +256,67 @@ function createInlineResult(item) {
   const title =
     escapeHtml(item.title);
 
+  const originalTitle =
+    item.originalTitle &&
+    normalizeText(item.originalTitle) !==
+      normalizeText(item.title)
+      ? escapeHtml(item.originalTitle)
+      : null;
+
+  const genres =
+    item.genreIds
+      .map(id => TMDB_GENRES[id])
+      .filter(Boolean)
+      .slice(0, 3);
+
+  const genreLine =
+    genres.length
+      ? genres.join(' · ')
+      : null;
+
   const overview =
     escapeHtml(
-      item.overview.slice(0, 450)
+      item.overview
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 420)
     );
 
-  let caption =
-    `<b>${title}</b>`;
+  const displayTitle =
+    year
+      ? `${item.title} (${year})`
+      : item.title;
 
-  if (year) {
-    caption += ` (${year})`;
+  const captionParts = [
+    `<b>${title}</b>`,
+  ];
+
+  if (originalTitle) {
+    captionParts.push(
+      `<i>${originalTitle}</i>`
+    );
   }
 
-  caption +=
-    `\n${typeLabel} · TMDB: ${rating}`;
+  captionParts.push(
+    `${typeLabel}${year ? ` · ${year}` : ''} · Рейтинг TMDB: <b>${rating}</b>`
+  );
+
+  if (genreLine) {
+    captionParts.push(
+      `Жанры: ${escapeHtml(genreLine)}`
+    );
+  }
 
   if (overview) {
-    caption += `\n\n${overview}`;
+    captionParts.push(overview);
   }
+
+  captionParts.push(
+    '<i>Найдено через WhatWeWatch</i>'
+  );
+
+  const mediaUrl =
+    `https://www.themoviedb.org/${item.type}/${item.id}`;
 
   return {
     type: 'photo',
@@ -252,16 +331,36 @@ function createInlineResult(item) {
       item.thumb,
 
     title:
-      item.title,
+      displayTitle,
 
-    description:
-      `${year || 'Год неизвестен'} · ${typeLabel} · ${rating}`,
+    description: [
+      typeLabel,
+      year || 'Год неизвестен',
+      `TMDB ${rating}`,
+      genreLine,
+    ]
+      .filter(Boolean)
+      .join(' · ')
+      .slice(0, 200),
 
-    caption,
+    caption:
+      captionParts.join('\n\n'),
 
     parse_mode: 'HTML',
+
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: 'Подробнее в TMDB',
+            url: mediaUrl,
+          },
+        ],
+      ],
+    },
   };
 }
+
 
 
 // =========================================================
