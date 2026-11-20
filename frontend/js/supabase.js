@@ -146,6 +146,37 @@ export function getSession() {
 }
 
 
+
+export async function signInWithTelegram(initData) {
+  const response = await fetch('/api/telegram-login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ initData }),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      result.error || 'Не удалось войти через Telegram'
+    );
+  }
+
+  if (!result.session?.access_token || !result.session?.refresh_token) {
+    throw new Error('Сервер не вернул действительную сессию');
+  }
+
+  localStorage.setItem(
+    SESSION_KEY,
+    JSON.stringify(result.session)
+  );
+
+  return result.session;
+}
+
+
 function saveSession(data) {
   if (!data?.access_token) {
     return;

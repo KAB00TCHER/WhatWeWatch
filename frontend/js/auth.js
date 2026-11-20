@@ -2,6 +2,7 @@
 import {
   signUp,
   signIn,
+  signInWithTelegram,
   signOut,
   getAccessToken,
   getCurrentUser as supabaseGetCurrentUser,
@@ -108,6 +109,10 @@ function getElements() {
       document.getElementById(
         'auth-submit'
       ),
+          telegramLoginButton:
+      document.getElementById(
+        'telegram-login-button'
+      ),
 
     authSwitch:
       document.getElementById(
@@ -188,6 +193,12 @@ function openAuthModal(
 
   const isLogin =
     mode === 'login';
+
+      els.telegramLoginButton.hidden =
+    !(
+      isLogin &&
+      window.Telegram?.WebApp?.initData
+    );
 
   els.authTitle.textContent =
     isLogin
@@ -441,6 +452,72 @@ async function handleAuthSubmit(
   }
 }
 
+// =========================================================
+// TELEGRAM LOGIN
+// =========================================================
+
+async function handleTelegramLogin() {
+  const els = getElements();
+
+  const initData =
+    window.Telegram?.WebApp?.initData;
+
+  if (!initData) {
+    showAuthError(
+      'Не удалось получить данные Telegram. Открой приложение через Telegram.'
+    );
+
+    return;
+  }
+
+  els.telegramLoginButton.disabled = true;
+  els.telegramLoginButton.textContent = 'Входим...';
+  els.authError.hidden = true;
+
+  try {
+    const session =
+      await signInWithTelegram(initData);
+
+    currentUser =
+      session?.user ||
+      await getCurrentUser();
+
+    if (!currentUser?.id) {
+      throw new Error(
+        'Не удалось получить данные аккаунта.'
+      );
+    }
+
+    closeAuthModal();
+
+    updateAccountButton();
+
+    dispatchAuthChange(currentUser);
+
+    console.log(
+      '[auth] Telegram login successful:',
+      currentUser
+    );
+
+  } catch (error) {
+    console.error(
+      '[auth] Telegram login failed:',
+      error
+    );
+
+    showAuthError(
+      error?.message ||
+      'Не удалось войти через Telegram.'
+    );
+
+  } finally {
+    els.telegramLoginButton.disabled = false;
+    els.telegramLoginButton.textContent =
+      'Войти через Telegram';
+  }
+}
+
+
 
 // =========================================================
 // TELEGRAM LINK
@@ -584,6 +661,12 @@ export async function initAuthUI() {
   els.authForm.addEventListener(
     'submit',
     handleAuthSubmit
+  );
+
+
+    els.telegramLoginButton.addEventListener(
+    'click',
+    handleTelegramLogin
   );
 
   els.authSwitch.addEventListener(

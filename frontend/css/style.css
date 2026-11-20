@@ -1222,6 +1222,11 @@ button:focus-visible,
   margin-top: var(--space-2);
 }
 
+#telegram-login-button {
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
 .auth-error {
   margin: 0;
 
