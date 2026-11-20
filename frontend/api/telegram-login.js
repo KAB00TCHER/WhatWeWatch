@@ -208,11 +208,12 @@ async function databaseRequest(path) {
 // SUPABASE AUTH ADMIN
 // =========================================================
 
-async function adminRequest(path, options = {}) {
-  const adminKey =
-    process.env.SUPABASE_AUTH_ADMIN_KEY;
 
-  if (!adminKey) {
+async function adminRequest(path, options = {}) {
+  const secretKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!secretKey) {
     throw new Error(
       'Supabase Auth Admin configuration error'
     );
@@ -224,10 +225,7 @@ async function adminRequest(path, options = {}) {
       ...options,
 
       headers: {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-
-        Authorization:
-          `Bearer ${adminKey}`,
+        apikey: secretKey,
 
         'Content-Type':
           'application/json',
@@ -237,6 +235,7 @@ async function adminRequest(path, options = {}) {
     }
   );
 }
+
 
 
 // =========================================================
