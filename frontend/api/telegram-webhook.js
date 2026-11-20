@@ -241,6 +241,7 @@ function scoreResult(item, query) {
 
 
 
+
 function createInlineResult(item) {
   const year = getYear(item.date);
 
@@ -270,41 +271,41 @@ function createInlineResult(item) {
   const overview = String(item.overview || '')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 420);
+    .slice(0, 350);
 
   const displayTitle = year
     ? `${item.title} (${year})`
     : item.title;
 
-  const captionParts = [
+  const messageParts = [
     `<b>${escapeHtml(item.title)}</b>`,
   ];
 
   if (originalTitle) {
-    captionParts.push(
+    messageParts.push(
       `<i>${escapeHtml(originalTitle)}</i>`
     );
   }
 
-  captionParts.push(
+  messageParts.push(
     `${typeLabel}${year ? ` · ${year}` : ''}`,
     `Рейтинг TMDB: <b>${rating}</b>`
   );
 
   if (genreLine) {
-    captionParts.push(
+    messageParts.push(
       `Жанры: ${escapeHtml(genreLine)}`
     );
   }
 
   if (overview) {
-    captionParts.push(
+    messageParts.push(
       '',
       escapeHtml(overview)
     );
   }
 
-  captionParts.push(
+  messageParts.push(
     '',
     '<i>Найдено через WhatWeWatch</i>'
   );
@@ -313,23 +314,23 @@ function createInlineResult(item) {
     `https://www.themoviedb.org/${item.type}/${item.id}`;
 
   const kinoMixSearchUrl =
-    `https://kinomix.web.app/search?query=${encodeURIComponent(item.title)}`;
+    `https://kinomix.web.app/search?query=${encodeURIComponent(
+      year
+        ? `${item.title} ${year}`
+        : item.title
+    )}`;
 
   return {
-    type: 'photo',
+    type: 'article',
 
     id: `tmdb-${item.type}-${item.id}`,
-
-    photo_url: item.poster,
-
-    thumbnail_url: item.thumb,
 
     title: displayTitle,
 
     description: [
       typeLabel,
       year || 'Год неизвестен',
-      `TMDB ${rating}`,
+      `Рейтинг TMDB ${rating}`,
       genreLine,
       originalTitle,
     ]
@@ -337,9 +338,12 @@ function createInlineResult(item) {
       .join(' · ')
       .slice(0, 255),
 
-    caption: captionParts.join('\n'),
+    thumbnail_url: item.thumb || undefined,
 
-    parse_mode: 'HTML',
+    input_message_content: {
+      message_text: messageParts.join('\n'),
+      parse_mode: 'HTML',
+    },
 
     reply_markup: {
       inline_keyboard: [
